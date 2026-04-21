@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from './lib/firebase';
+import { db, auth } from './lib/firebase';
+import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import Auth from './components/Auth';
 import CharacterList from './components/CharacterList';
 import CharacterCreate from './components/CharacterCreate';
 import CharacterDetails from './components/CharacterDetails';
 import CharacterSummary from './components/CharacterSummary';
-import { Swords, LogOut } from 'lucide-react';
+import { Swords, LogOut, Users, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import FriendsList from './components/FriendsList';
+import FriendCharacters from './components/FriendCharacters';
 
-export type View = 'list' | 'create' | 'details' | 'summary';
+export type View = 'list' | 'create' | 'details' | 'summary' | 'social';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -17,10 +20,38 @@ export default function App() {
   const [view, setView] = useState<View>('list');
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
   const [summaryIds, setSummaryIds] = useState<string[]>([]);
+  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser) {
+        // Ensure user has a friend code
+        const userDocRef = doc(db, 'users', authUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          if (!data.friendCode) {
+            const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            await updateDoc(userDocRef, { friendCode: newCode });
+            setUser({ ...authUser, friendCode: newCode } as any);
+          } else {
+            setUser({ ...authUser, ...data } as any);
+          }
+        } else {
+          // If profile missing (shouldn't happen with Auth.tsx logic but safety first)
+          const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+          await setDoc(userDocRef, {
+            uid: authUser.uid,
+            email: authUser.email,
+            friendCode: newCode,
+            createdAt: new Date().toISOString()
+          });
+          setUser({ ...authUser, friendCode: newCode } as any);
+        }
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
     return unsubscribe;
@@ -69,21 +100,35 @@ export default function App() {
             </button>
 
             <button 
+              onClick={() => setView('social')}
+              className={`text-left p-3 rounded-lg transition-all border mt-2 flex items-center gap-3 ${
+                view === 'social' 
+                  ? 'glass-panel border-purple-500/50 bg-purple-900/20 text-white' 
+                  : 'border-slate-800 text-slate-400 hover:bg-slate-800/50'
+              }`}
+            >
+              <Users className={`w-5 h-5 ${view === 'social' ? 'text-purple-400' : 'text-slate-500'}`} />
+              <div className="flex-1">
+                <div className="text-sm font-bold">Friends</div>
+                <div className="text-[10px] uppercase tracking-widest opacity-60">Social connection</div>
+              </div>
+            </button>
+
+            <button 
               onClick={() => {
-                if (summaryIds.length > 0) setView('summary');
+                setView('summary');
               }}
-              disabled={summaryIds.length === 0}
               className={`text-left p-3 rounded-lg transition-all border mt-2 ${
                 view === 'summary' 
                   ? 'glass-panel border-emerald-500/50 bg-emerald-900/20 text-white' 
-                  : summaryIds.length > 0 
-                    ? 'border-slate-800 text-slate-400 hover:bg-slate-800/50' 
-                    : 'border-transparent text-slate-600 cursor-not-allowed opacity-50'
+                  : 'border-slate-800 text-slate-400 hover:bg-slate-800/50'
               }`}
             >
-              <div className="text-sm font-bold">Comparison Summary</div>
+              <div className="text-sm font-bold text-emerald-400 tracking-tight flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4" /> Strategy Room
+              </div>
               <div className="text-[10px] uppercase tracking-widest opacity-60">
-                {summaryIds.length === 0 ? 'Select characters first' : `${summaryIds.length} Selected`}
+                {summaryIds.length === 0 ? 'Start Comparison' : `${summaryIds.length} Selected`}
               </div>
             </button>
 
@@ -132,8 +177,6 @@ export default function App() {
                     setSelectedCharacterId(id);
                     setView('details');
                   }}
-                  onSelectionChange={setSummaryIds}
-                  selectedIds={summaryIds}
                 />
               </motion.div>
             )}
@@ -148,6 +191,23 @@ export default function App() {
                 <CharacterCreate 
                   onCancel={() => setView('list')} 
                   onSuccess={() => setView('list')}
+                />
+              </motion.div>
+            )}
+
+            {view === 'social' && (
+              <motion.div
+                key="social"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+              >
+                <FriendsList 
+                  selectedIds={summaryIds}
+                  onSelectionChange={setSummaryIds}
+                  onViewFriendCharacters={(id) => {
+                    setSelectedFriendId(id);
+                  }}
                 />
               </motion.div>
             )}
@@ -175,6 +235,8 @@ export default function App() {
               >
                 <CharacterSummary 
                   characterIds={summaryIds} 
+                  currentUserUid={user?.uid}
+                  onSelectionChange={setSummaryIds}
                   onBack={() => setView('list')}
                   onClear={() => {
                     setSummaryIds([]);

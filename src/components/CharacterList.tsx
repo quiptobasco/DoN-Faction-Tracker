@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { PlusCircle, Shield, User } from 'lucide-react';
+import { PlusCircle, Shield, User, Trash2 } from 'lucide-react';
 
 interface Character {
   id: string;
@@ -15,11 +15,9 @@ interface Character {
 interface Props {
   onAddCharacter: () => void;
   onSelectCharacter: (id: string) => void;
-  onSelectionChange?: (ids: string[]) => void;
-  selectedIds?: string[];
 }
 
-export default function CharacterList({ onAddCharacter, onSelectCharacter, onSelectionChange, selectedIds = [] }: Props) {
+export default function CharacterList({ onAddCharacter, onSelectCharacter }: Props) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,14 +41,14 @@ export default function CharacterList({ onAddCharacter, onSelectCharacter, onSel
     return unsubscribe;
   }, []);
 
-  const toggleSelect = (e: React.MouseEvent, id: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
     e.stopPropagation();
-    if (!onSelectionChange) return;
-    
-    const newSelection = selectedIds.includes(id)
-      ? selectedIds.filter(idx => idx !== id)
-      : [...selectedIds, id];
-    onSelectionChange(newSelection);
+    if (!window.confirm(`Are you sure you want to delete ${name}?`)) return;
+    try {
+      await deleteDoc(doc(db, 'characters', id));
+    } catch (err) {
+      console.error('Error deleting character:', err);
+    }
   };
 
   if (loading) {
@@ -64,20 +62,7 @@ export default function CharacterList({ onAddCharacter, onSelectCharacter, onSel
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border border-slate-800/50">
-        <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-serif font-bold text-gold">Your Adventurers</h2>
-          {selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-              <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">{selectedIds.length} Selected</span>
-              <button 
-                onClick={() => onSelectionChange?.([])}
-                className="text-[10px] text-slate-500 hover:text-white uppercase font-bold"
-              >
-                Clear
-              </button>
-            </div>
-          )}
-        </div>
+        <h2 className="text-2xl font-serif font-bold text-gold">Your Adventurers</h2>
         <button 
           onClick={onAddCharacter}
           className="fancy-button flex items-center gap-2"
@@ -94,42 +79,34 @@ export default function CharacterList({ onAddCharacter, onSelectCharacter, onSel
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {characters.map((char) => {
-            const isSelected = selectedIds.includes(char.id);
             return (
               <div 
                 key={char.id}
                 onClick={() => onSelectCharacter(char.id)}
-                className={`glass-panel p-6 cursor-pointer transition-all group relative border-t-2 ${
-                  isSelected 
-                    ? 'border-t-emerald-500 bg-emerald-900/5 ring-1 ring-emerald-500/30' 
-                    : 'border-t-transparent hover:border-blue-500/50 hover:bg-blue-900/10'
-                }`}
+                className="glass-panel p-6 cursor-pointer transition-all group relative border-t-2 border-t-transparent hover:border-blue-500/50 hover:bg-blue-900/10"
               >
-                {/* Select Checkbox */}
-                <div 
-                  onClick={(e) => toggleSelect(e, char.id)}
-                  className={`absolute top-4 right-4 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all z-20 ${
-                    isSelected 
-                      ? 'bg-emerald-500 border-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.5)]' 
-                      : 'border-slate-700 hover:border-slate-500 scale-90 group-hover:scale-100'
-                  }`}
-                >
-                  {isSelected && <span className="text-xs">✓</span>}
-                </div>
-
                 <div className="absolute top-2 right-2 opacity-5 group-hover:opacity-10 transition-opacity">
                   <Shield className="w-12 h-12 text-blue-400" />
                 </div>
                 
                 <div className="relative z-10">
-                  <h3 className={`text-xl font-bold transition-colors ${isSelected ? 'text-emerald-300' : 'text-white group-hover:text-blue-300'}`}>{char.name}</h3>
+                  <h3 className="text-xl font-bold text-white group-hover:text-blue-300 transition-colors">{char.name}</h3>
                   <div className="flex items-center gap-2 text-[10px] text-blue-400 uppercase tracking-widest mt-1">
                     Level {char.level} <span className="opacity-30">•</span> {char.faction}
                   </div>
                   <div className="mt-4 pt-4 border-t border-slate-700/50 flex justify-between items-center">
                     <div className="text-[10px] uppercase tracking-tighter text-slate-500">Reputation</div>
-                    <div className="text-xs font-bold text-emerald-400 stat-glow uppercase tracking-wider">
-                      {char.reputation} {char.reputationValue !== undefined && `(${char.reputationValue > 0 ? '+' : ''}${char.reputationValue})`}
+                    <div className="flex items-center gap-3">
+                      <div className="text-xs font-bold text-emerald-400 stat-glow uppercase tracking-wider">
+                        {char.reputation} {char.reputationValue !== undefined && `(${char.reputationValue > 0 ? '+' : ''}${char.reputationValue})`}
+                      </div>
+                      <button 
+                        onClick={(e) => handleDelete(e, char.id, char.name)}
+                        className="p-1.5 text-slate-600 hover:text-red-400 transition-colors z-20"
+                        title="Delete Character"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 </div>

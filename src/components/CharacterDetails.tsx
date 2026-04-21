@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
-import { doc, getDoc, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
-import { ArrowLeft, CheckCircle2, Circle, Shield, Trophy } from 'lucide-react';
+import { doc, getDoc, updateDoc, onSnapshot, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { ArrowLeft, CheckCircle2, Circle, Shield, Trophy, Trash2 } from 'lucide-react';
+import { auth } from '../lib/firebase';
 import { NORRATHS_KEEPERS_TIERS, Tier, Task } from '../lib/constants';
 
 interface Character {
@@ -12,6 +13,7 @@ interface Character {
   reputation: string;
   reputationValue?: number;
   completedTasks: string[];
+  userId: string;
 }
 
 interface Props {
@@ -64,6 +66,19 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
     }
   };
 
+  const handleDelete = async () => {
+    if (!character || !window.confirm(`Are you sure you want to delete ${character.name}?`)) return;
+    setSaving(true);
+    try {
+      await deleteDoc(doc(db, 'characters', characterId));
+      onBack();
+    } catch (err) {
+      console.error('Error deleting character:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -74,6 +89,7 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
 
   if (!character) return null;
 
+  const isOwner = character.userId === auth.currentUser?.uid;
   const isNKSide = character.faction === "Norrath's Keepers";
   const hasChanges = JSON.stringify([...editedTaskIds].sort()) !== JSON.stringify([...character.completedTasks].sort());
 
@@ -85,7 +101,18 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div>
-            <h2 className="text-4xl font-serif font-bold faction-gold tracking-tight">{character.name}</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-4xl font-serif font-bold faction-gold tracking-tight">{character.name}</h2>
+              {isOwner && (
+                <button 
+                  onClick={handleDelete}
+                  className="p-2 text-slate-600 hover:text-red-500 transition-colors"
+                  title="Delete Character"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-6 mt-1">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] uppercase tracking-widest text-slate-500">Faction:</span>
@@ -111,28 +138,34 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
           </div>
           <div className="text-xs text-blue-300 font-mono">{Math.round((editedTaskIds.length / 15) * 100)}% Current</div>
           
-          <div className="flex gap-4 mt-4">
-            {hasChanges && (
+          {isOwner ? (
+            <div className="flex gap-4 mt-4">
+              {hasChanges && (
+                <button
+                  onClick={() => setEditedTaskIds(character.completedTasks)}
+                  disabled={saving}
+                  className="px-4 py-2 rounded-lg font-sans font-bold border border-slate-700 text-slate-400 hover:bg-slate-800 transition-all"
+                >
+                  Discard
+                </button>
+              )}
               <button
-                onClick={() => setEditedTaskIds(character.completedTasks)}
-                disabled={saving}
-                className="px-4 py-2 rounded-lg font-sans font-bold border border-slate-700 text-slate-400 hover:bg-slate-800 transition-all"
+                onClick={handleUpdate}
+                disabled={!hasChanges || saving}
+                className={`px-6 py-2 rounded-lg font-sans font-bold transition-all ${
+                  hasChanges 
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' 
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                }`}
               >
-                Discard
+                {saving ? 'Saving...' : 'Update Chronicles'}
               </button>
-            )}
-            <button
-              onClick={handleUpdate}
-              disabled={!hasChanges || saving}
-              className={`px-6 py-2 rounded-lg font-sans font-bold transition-all ${
-                hasChanges 
-                  ? 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' 
-                  : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
-              }`}
-            >
-              {saving ? 'Saving...' : 'Update Chronicles'}
-            </button>
-          </div>
+            </div>
+          ) : (
+            <div className="mt-4 px-4 py-2 bg-blue-900/10 border border-blue-500/20 rounded-lg text-[10px] text-blue-400 font-bold uppercase tracking-widest">
+              Read-Only Allied Intel
+            </div>
+          )}
         </div>
       </div>
 
@@ -164,8 +197,9 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
                       <input 
                         type="checkbox"
                         checked={isCompleted}
+                        disabled={!isOwner}
                         onChange={() => toggleTask(task.id)}
-                        className="task-checkbox shrink-0"
+                        className={`task-checkbox shrink-0 ${!isOwner ? 'cursor-not-allowed opacity-50' : ''}`}
                       />
                       <div className={`text-sm transition-colors ${
                         isCompleted ? 'text-slate-200' : 'text-slate-400 group-hover:text-slate-200'

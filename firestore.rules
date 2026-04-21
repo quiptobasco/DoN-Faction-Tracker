@@ -19,10 +19,16 @@ service cloud.firestore {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
+    function areFriends(uid1, uid2) {
+      let id = uid1 < uid2 ? uid1 + "_" + uid2 : uid2 + "_" + uid1;
+      return exists(/databases/$(database)/documents/friendships/$(id)) && 
+             get(/databases/$(database)/documents/friendships/$(id)).data.status == 'accepted';
+    }
+
     // Characters rules
     match /characters/{characterId} {
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || areFriends(resource.data.userId, request.auth.uid));
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || areFriends(resource.data.userId, request.auth.uid));
       
       function isValidCharacter(data) {
         return data.userId == request.auth.uid &&
@@ -54,9 +60,31 @@ service cloud.firestore {
 
     // User profile rules
     match /users/{userId} {
-      allow get: if isOwner(userId);
+      allow get: if isSignedIn(); 
+      allow list: if isSignedIn(); // Simplified list for search queries
       allow create: if isOwner(userId) && request.resource.data.uid == userId;
       allow update: if isOwner(userId) && request.resource.data.uid == userId;
+    }
+
+    // Friendship rules
+    match /friendships/{friendshipId} {
+      allow get: if isSignedIn() && request.auth.uid in resource.data.uids;
+      allow list: if isSignedIn() && resource.data.uids.hasAny([request.auth.uid]);
+      allow create: if isSignedIn() && 
+                      request.resource.data.requesterId == request.auth.uid &&
+                      request.resource.data.status == 'pending' &&
+                      request.resource.data.uids.size() == 2 &&
+                      request.auth.uid in request.resource.data.uids &&
+                      isValidId(request.resource.data.receiverId);
+      allow update: if isSignedIn() && 
+                      request.auth.uid in resource.data.uids &&
+                      (
+                        // Receiver accepts
+                        (request.auth.uid == resource.data.receiverId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'accepted') ||
+                        // Either party deletes/cancels (implemented via delete usually, but we can allow status update to 'rejected' if desired)
+                        false
+                      );
+      allow delete: if isSignedIn() && request.auth.uid in resource.data.uids;
     }
   }
 }

@@ -7,9 +7,23 @@
       "properties": {
         "uid": { "type": "string" },
         "email": { "type": "string" },
+        "friendCode": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["uid", "email"]
+      "required": ["uid", "email", "friendCode"]
+    },
+    "Friendship": {
+      "title": "Friendship",
+      "description": "Connection between two users",
+      "type": "object",
+      "properties": {
+        "uids": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["pending", "accepted"] },
+        "requesterId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uids", "status", "requesterId", "receiverId"]
     },
     "Character": {
       "title": "Character",
@@ -36,6 +50,10 @@
     "characters/{characterId}": {
       "schema": "Character",
       "description": "Character progression storage"
+    },
+    "friendships/{friendshipId}": {
+      "schema": "Friendship",
+      "description": "Friendship request and status storage"
     }
   }
 }

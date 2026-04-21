@@ -28,10 +28,12 @@ export default function Auth() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
-        // Initialize user profile
+        // Initialize user profile with friend code
+        const friendCode = Math.random().toString(36).substring(2, 8).toUpperCase();
         await setDoc(doc(db, 'users', user.uid), {
           uid: user.uid,
           email: user.email,
+          friendCode,
           createdAt: new Date().toISOString()
         });
       }
