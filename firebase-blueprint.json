@@ -1,0 +1,41 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Character": {
+      "title": "Character",
+      "description": "An Everquest character and their progression",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "level": { "type": "number" },
+        "faction": { "type": "string", "enum": ["Norrath's Keepers", "Dark Reign"] },
+        "reputation": { "type": "string" },
+        "completedTasks": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "level", "faction", "reputation", "completedTasks"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profile storage"
+    },
+    "characters/{characterId}": {
+      "schema": "Character",
+      "description": "Character progression storage"
+    }
+  }
+}

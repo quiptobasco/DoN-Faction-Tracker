@@ -1,0 +1,6 @@
+{
+  "name": "Norrath Tracker",
+  "description": "An Everquest progression tracker focusing on Dragons of Norrath expansion tasks and faction standing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
