@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../lib/firebase';
+import { handleFirestoreError } from '../lib/firestoreUtils';
 import { collection, query, where, onSnapshot, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc, limit } from 'firebase/firestore';
 import { UserPlus, Check, X, Shield, Users as UsersIcon, Copy, Search, ExternalLink } from 'lucide-react';
 import FriendCharacters from './FriendCharacters';
@@ -36,6 +37,8 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
   const [userProfile, setUserProfile] = useState<any>(null);
   const [activeFriendId, setActiveFriendId] = useState<string | null>(null);
 
+  const [friendshipDeleteConfirmId, setFriendshipDeleteConfirmId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!auth.currentUser) return;
 
@@ -67,7 +70,7 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
 
       setFriendships(fullFriends);
       setLoading(false);
-    });
+    }, (error) => handleFirestoreError(error, 'listen', 'friendships'));
 
     return unsubscribe;
   }, []);
@@ -131,8 +134,18 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
   };
 
   const removeFriend = async (friendshipId: string) => {
-    if (!window.confirm('Terminate this alliance? This will revoke mutual access to character chronicles.')) return;
-    await deleteDoc(doc(db, 'friendships', friendshipId));
+    if (friendshipDeleteConfirmId !== friendshipId) {
+      setFriendshipDeleteConfirmId(friendshipId);
+      setTimeout(() => setFriendshipDeleteConfirmId(prev => prev === friendshipId ? null : prev), 3000);
+      return;
+    }
+    
+    try {
+      await deleteDoc(doc(db, 'friendships', friendshipId));
+      setFriendshipDeleteConfirmId(null);
+    } catch (err) {
+      console.error('Error removing alliance:', err);
+    }
   };
 
   const copyCode = () => {
@@ -202,8 +215,16 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
                       <button onClick={() => acceptFriend(f.id)} className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 border border-emerald-500/20">
                         <Check className="w-4 h-4" />
                       </button>
-                      <button onClick={() => removeFriend(f.id)} className="p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 border border-red-500/20">
+                      <button 
+                        onClick={() => removeFriend(f.id)} 
+                        className={`p-2 transition-all rounded-lg border flex items-center gap-1 ${
+                          friendshipDeleteConfirmId === f.id
+                            ? 'bg-red-500 text-white animate-pulse px-3 border-transparent'
+                            : 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border-red-500/20'
+                        }`}
+                      >
                         <X className="w-4 h-4" />
+                        {friendshipDeleteConfirmId === f.id && <span className="text-[10px] font-black uppercase">Confirm?</span>}
                       </button>
                     </div>
                   </div>
@@ -214,8 +235,15 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
                       <div className="text-sm font-bold text-white">{f.profile?.email}</div>
                       <div className="text-[10px] text-slate-400 uppercase">Wait for acceptance...</div>
                     </div>
-                    <button onClick={() => removeFriend(f.id)} className="text-[10px] text-slate-500 hover:text-red-400 uppercase font-bold">
-                      Cancel
+                    <button 
+                      onClick={() => removeFriend(f.id)} 
+                      className={`text-[10px] uppercase font-bold transition-all px-2 py-1 rounded ${
+                        friendshipDeleteConfirmId === f.id
+                          ? 'bg-red-500 text-white animate-pulse'
+                          : 'text-slate-500 hover:text-red-400'
+                      }`}
+                    >
+                      {friendshipDeleteConfirmId === f.id ? 'Confirm Cancel?' : 'Cancel'}
                     </button>
                   </div>
                 ))}
@@ -257,10 +285,15 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
                     </div>
                     <button 
                       onClick={(e) => { e.stopPropagation(); removeFriend(f.id); }} 
-                      className="p-2 text-slate-500 hover:text-red-400 transition-colors"
-                      title="Terminate Alliance"
+                      className={`p-2 transition-all flex items-center gap-2 rounded-lg ${
+                        friendshipDeleteConfirmId === f.id 
+                          ? 'bg-red-500 text-white animate-pulse px-3' 
+                          : 'text-slate-500 hover:text-red-400'
+                      }`}
+                      title={friendshipDeleteConfirmId === f.id ? "Confirm Termination" : "Terminate Alliance"}
                     >
                       <X className="w-5 h-5" />
+                      {friendshipDeleteConfirmId === f.id && <span className="text-[10px] font-black uppercase">Confirm?</span>}
                     </button>
                   </div>
                 </div>

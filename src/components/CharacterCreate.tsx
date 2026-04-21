@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { Swords, ArrowLeft, Shield } from 'lucide-react';
-import { FACTIONS } from '../lib/constants';
+import { Swords, ArrowLeft, Shield, CheckCircle2, Circle } from 'lucide-react';
+import { FACTIONS, NORRATHS_KEEPERS_TIERS, Task } from '../lib/constants';
 
 interface Props {
   onCancel: () => void;
@@ -14,8 +14,29 @@ export default function CharacterCreate({ onCancel, onSuccess }: Props) {
   const [level, setLevel] = useState(70);
   const [faction, setFaction] = useState(FACTIONS[0]);
   const [reputationValue, setReputationValue] = useState(0);
+  const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const toggleTask = (taskId: string) => {
+    setCompletedTasks(prev => 
+      prev.includes(taskId)
+        ? prev.filter(id => id !== taskId)
+        : [...prev, taskId]
+    );
+  };
+
+  const toggleTierGroup = (tierTasks: Task[], select: boolean) => {
+    const tierIds = tierTasks.map(t => t.id);
+    if (select) {
+      setCompletedTasks(prev => {
+        const toAdd = tierIds.filter(id => !prev.includes(id));
+        return [...prev, ...toAdd];
+      });
+    } else {
+      setCompletedTasks(prev => prev.filter(id => !tierIds.includes(id)));
+    }
+  };
 
   const getReputationLabel = (value: number): string => {
     if (value >= 1100) return 'Ally';
@@ -44,7 +65,7 @@ export default function CharacterCreate({ onCancel, onSuccess }: Props) {
         faction,
         reputation: getReputationLabel(reputationValue),
         reputationValue: Number(reputationValue),
-        completedTasks: [],
+        completedTasks: completedTasks,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -153,6 +174,58 @@ export default function CharacterCreate({ onCancel, onSuccess }: Props) {
             <span>Scowls</span>
             <span>Indifferent</span>
             <span>Ally</span>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+            <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-1">Chronicled Progress</label>
+            <div className="text-[10px] text-blue-300 font-mono italic">
+              {completedTasks.length} / {NORRATHS_KEEPERS_TIERS.flatMap(t => t.tasks).length} Complete
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {NORRATHS_KEEPERS_TIERS.map((tier) => {
+              const tierCompleted = tier.tasks.filter(t => completedTasks.includes(t.id)).length;
+              const allSelected = tierCompleted === tier.tasks.length;
+
+              return (
+                <div key={tier.id} className="bg-black/20 rounded-xl p-5 border border-slate-800 space-y-4">
+                  <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                    <div className="text-xs font-serif text-blue-200 uppercase tracking-tight">{tier.name}</div>
+                    <button 
+                      type="button"
+                      onClick={() => toggleTierGroup(tier.tasks, !allSelected)}
+                      className="text-[9px] uppercase font-black text-slate-500 hover:text-blue-400 transition-colors"
+                    >
+                      {allSelected ? 'Clear' : 'Select All'}
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {tier.tasks.map((task) => {
+                      const isCompleted = completedTasks.includes(task.id);
+                      return (
+                        <button
+                          key={task.id}
+                          type="button"
+                          onClick={() => toggleTask(task.id)}
+                          className="w-full flex items-center gap-3 group text-left"
+                        >
+                          <div className={`transition-colors ${isCompleted ? 'text-emerald-400' : 'text-slate-600'}`}>
+                            {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                          </div>
+                          <div className={`text-xs transition-colors ${isCompleted ? 'text-slate-200' : 'text-slate-500 hover:text-slate-300'}`}>
+                            <span className="opacity-40 text-[9px] uppercase mr-1">{task.type.split(' ')[0]}:</span>
+                            {task.name}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 

@@ -27,6 +27,8 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
   const [editedTaskIds, setEditedTaskIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'characters', characterId), (doc) => {
       if (doc.exists()) {
@@ -51,6 +53,20 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
     );
   };
 
+  const toggleTierGroup = (tierTasks: Task[], select: boolean) => {
+    const tierIds = tierTasks.map(t => t.id);
+    if (select) {
+      // Add all missing ids from this tier
+      setEditedTaskIds(prev => {
+        const toAdd = tierIds.filter(id => !prev.includes(id));
+        return [...prev, ...toAdd];
+      });
+    } else {
+      // Remove all ids from this tier
+      setEditedTaskIds(prev => prev.filter(id => !tierIds.includes(id)));
+    }
+  };
+
   const handleUpdate = async () => {
     if (!character) return;
     setSaving(true);
@@ -67,7 +83,14 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
   };
 
   const handleDelete = async () => {
-    if (!character || !window.confirm(`Are you sure you want to delete ${character.name}?`)) return;
+    if (!character) return;
+    
+    if (!deleteConfirm) {
+      setDeleteConfirm(true);
+      setTimeout(() => setDeleteConfirm(false), 3000);
+      return;
+    }
+
     setSaving(true);
     try {
       await deleteDoc(doc(db, 'characters', characterId));
@@ -93,6 +116,8 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
   const isNKSide = character.faction === "Norrath's Keepers";
   const hasChanges = JSON.stringify([...editedTaskIds].sort()) !== JSON.stringify([...character.completedTasks].sort());
 
+  const totalTasks = NORRATHS_KEEPERS_TIERS.flatMap(t => t.tasks).length;
+
   return (
     <div className="space-y-8 pb-12">
       <div className="flex items-center justify-between mb-8">
@@ -106,10 +131,15 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
               {isOwner && (
                 <button 
                   onClick={handleDelete}
-                  className="p-2 text-slate-600 hover:text-red-500 transition-colors"
-                  title="Delete Character"
+                  className={`p-2 transition-all flex items-center gap-2 rounded-lg ${
+                    deleteConfirm 
+                      ? 'bg-red-500 text-white animate-pulse px-3' 
+                      : 'text-slate-600 hover:text-red-500'
+                  }`}
+                  title={deleteConfirm ? "Confirm Permanent Deletion" : "Delete Character"}
                 >
                   <Trash2 className="w-5 h-5" />
+                  {deleteConfirm && <span className="text-[10px] font-black uppercase tracking-widest">Confirm?</span>}
                 </button>
               )}
             </div>
@@ -133,10 +163,10 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
           <div className="w-48 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700 mb-2">
             <div 
               className="h-full bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_10px_#3b82f6] transition-all duration-500" 
-              style={{ width: `${(editedTaskIds.length / 15) * 100}%` }}
+              style={{ width: `${(editedTaskIds.length / totalTasks) * 100}%` }}
             ></div>
           </div>
-          <div className="text-xs text-blue-300 font-mono">{Math.round((editedTaskIds.length / 15) * 100)}% Current</div>
+          <div className="text-xs text-blue-300 font-mono">{Math.round((editedTaskIds.length / totalTasks) * 100)}% Current</div>
           
           {isOwner ? (
             <div className="flex gap-4 mt-4">
@@ -177,42 +207,61 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {NORRATHS_KEEPERS_TIERS.map((tier) => (
-            <div key={tier.id} className="fancy-card border-t-2 border-t-blue-500/30">
-              <h3 className="text-lg font-serif text-blue-200 border-b border-slate-700 pb-3 mb-4 flex justify-between items-center">
-                <span>{tier.name}: {tier.reputation}</span>
-                <span className="text-xs text-slate-500 font-sans">
-                  {tier.tasks.filter(t => editedTaskIds.includes(t.id)).length}/{tier.tasks.length}
-                </span>
-              </h3>
+          {NORRATHS_KEEPERS_TIERS.map((tier) => {
+            const completedCount = tier.tasks.filter(t => editedTaskIds.includes(t.id)).length;
+            const allSelected = completedCount === tier.tasks.length;
+            
+            return (
+              <div key={tier.id} className="fancy-card border-t-2 border-t-blue-500/30">
+                <div className="border-b border-slate-700 pb-3 mb-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-serif text-blue-200">{tier.name}: {tier.reputation}</h3>
+                    <span className="text-xs text-slate-500 font-sans">
+                      {completedCount}/{tier.tasks.length}
+                    </span>
+                  </div>
+                  {isOwner && (
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => toggleTierGroup(tier.tasks, !allSelected)}
+                        className={`text-[9px] uppercase font-black tracking-widest transition-colors ${
+                          allSelected ? 'text-blue-400 hover:text-slate-400' : 'text-slate-500 hover:text-blue-400'
+                        }`}
+                      >
+                        {allSelected ? 'Deselect All' : 'Select All'}
+                      </button>
+                    </div>
+                  )}
+                </div>
 
-              <div className="space-y-4">
-                {tier.tasks.map((task) => {
-                  const isCompleted = editedTaskIds.includes(task.id);
-                  return (
-                    <label 
-                      key={task.id}
-                      className="flex items-center gap-3 cursor-pointer group"
-                    >
-                      <input 
-                        type="checkbox"
-                        checked={isCompleted}
-                        disabled={!isOwner}
-                        onChange={() => toggleTask(task.id)}
-                        className={`task-checkbox shrink-0 ${!isOwner ? 'cursor-not-allowed opacity-50' : ''}`}
-                      />
-                      <div className={`text-sm transition-colors ${
-                        isCompleted ? 'text-slate-200' : 'text-slate-400 group-hover:text-slate-200'
-                      }`}>
-                        <span className="opacity-50 text-[10px] uppercase font-sans mr-1">{task.type.split(' ')[0]}:</span>
-                        {task.name}
-                      </div>
-                    </label>
-                  );
-                })}
+                <div className="space-y-4">
+                  {tier.tasks.map((task) => {
+                    const isCompleted = editedTaskIds.includes(task.id);
+                    return (
+                      <label 
+                        key={task.id}
+                        className="flex items-center gap-3 cursor-pointer group"
+                      >
+                        <input 
+                          type="checkbox"
+                          checked={isCompleted}
+                          disabled={!isOwner}
+                          onChange={() => toggleTask(task.id)}
+                          className={`task-checkbox shrink-0 ${!isOwner ? 'cursor-not-allowed opacity-50' : ''}`}
+                        />
+                        <div className={`text-sm transition-colors ${
+                          isCompleted ? 'text-slate-200' : 'text-slate-400 group-hover:text-slate-200'
+                        }`}>
+                          <span className="opacity-50 text-[10px] uppercase font-sans mr-1">{task.type.split(' ')[0]}:</span>
+                          {task.name}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

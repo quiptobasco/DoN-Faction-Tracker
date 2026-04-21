@@ -51,5 +51,25 @@ export const NORRATHS_KEEPERS_TIERS: Tier[] = [
       { id: 'nk3-r1', name: 'Trial of Perseverance', type: 'Raid' },
       { id: 'nk3-r2', name: 'Volkara’s Bite', type: 'Raid' },
     ]
+  },
+  {
+    id: 4,
+    name: 'Tier 4',
+    reputation: 'Kindly',
+    tasks: [
+      { id: 'nk4-r1', name: 'Goblin Dojo', type: 'Raid' },
+      { id: 'nk4-r2', name: 'Guardian of the Sands', type: 'Raid' },
+      { id: 'nk4-r3', name: 'An End to the Storms', type: 'Raid' },
+    ]
+  },
+  {
+    id: 5,
+    name: 'Tier 5',
+    reputation: 'Warmly',
+    tasks: [
+      { id: 'nk5-g1', name: 'Origins of the Curse', type: 'Group Mission' },
+      { id: 'nk5-r1', name: 'The Curse of Ju\'rek', type: 'Raid' },
+      { id: 'nk5-r2', name: 'In the Shadows', type: 'Raid' },
+    ]
   }
 ];

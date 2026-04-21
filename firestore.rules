@@ -27,8 +27,12 @@ service cloud.firestore {
 
     // Characters rules
     match /characters/{characterId} {
-      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || areFriends(resource.data.userId, request.auth.uid));
-      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || areFriends(resource.data.userId, request.auth.uid));
+      function canReadCharacter(data) {
+        return data.userId == request.auth.uid || areFriends(data.userId, request.auth.uid);
+      }
+
+      allow list: if isSignedIn() && canReadCharacter(resource.data);
+      allow get: if isSignedIn() && (resource == null || canReadCharacter(resource.data));
       
       function isValidCharacter(data) {
         return data.userId == request.auth.uid &&
@@ -69,7 +73,7 @@ service cloud.firestore {
     // Friendship rules
     match /friendships/{friendshipId} {
       allow get: if isSignedIn() && request.auth.uid in resource.data.uids;
-      allow list: if isSignedIn() && resource.data.uids.hasAny([request.auth.uid]);
+      allow list: if isSignedIn() && request.auth.uid in resource.data.uids;
       allow create: if isSignedIn() && 
                       request.resource.data.requesterId == request.auth.uid &&
                       request.resource.data.status == 'pending' &&

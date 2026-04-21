@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
+import { handleFirestoreError } from '../lib/firestoreUtils';
 import { PlusCircle, Shield, User, Trash2 } from 'lucide-react';
 
 interface Character {
@@ -21,6 +22,8 @@ export default function CharacterList({ onAddCharacter, onSelectCharacter }: Pro
   const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!auth.currentUser) return;
 
@@ -36,16 +39,24 @@ export default function CharacterList({ onAddCharacter, onSelectCharacter }: Pro
       });
       setCharacters(charData);
       setLoading(false);
-    });
+    }, (error) => handleFirestoreError(error, 'listen', 'characters'));
 
     return unsubscribe;
   }, []);
 
-  const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!window.confirm(`Are you sure you want to delete ${name}?`)) return;
+    
+    if (deleteConfirmId !== id) {
+      setDeleteConfirmId(id);
+      // Auto-reset after 3 seconds
+      setTimeout(() => setDeleteConfirmId(prev => prev === id ? null : prev), 3000);
+      return;
+    }
+
     try {
       await deleteDoc(doc(db, 'characters', id));
+      setDeleteConfirmId(null);
     } catch (err) {
       console.error('Error deleting character:', err);
     }
@@ -101,11 +112,19 @@ export default function CharacterList({ onAddCharacter, onSelectCharacter }: Pro
                         {char.reputation} {char.reputationValue !== undefined && `(${char.reputationValue > 0 ? '+' : ''}${char.reputationValue})`}
                       </div>
                       <button 
-                        onClick={(e) => handleDelete(e, char.id, char.name)}
-                        className="p-1.5 text-slate-600 hover:text-red-400 transition-colors z-20"
-                        title="Delete Character"
+                        onClick={(e) => handleDelete(e, char.id)}
+                        className={`p-1.5 transition-all z-20 rounded flex items-center gap-1 ${
+                          deleteConfirmId === char.id 
+                            ? 'bg-red-500 text-white px-2 animate-pulse' 
+                            : 'text-slate-600 hover:text-red-400'
+                        }`}
+                        title={deleteConfirmId === char.id ? "Confirm Delete" : "Delete Character"}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {deleteConfirmId === char.id ? (
+                          <span className="text-[10px] font-black uppercase">Confirm?</span>
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
                       </button>
                     </div>
                   </div>

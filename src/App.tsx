@@ -132,16 +132,6 @@ export default function App() {
               </div>
             </button>
 
-            <button 
-              onClick={() => setView('create')}
-              className={`mt-4 w-full py-3 border border-dashed rounded-lg text-xs font-sans transition-all flex items-center justify-center gap-2 ${
-                view === 'create'
-                  ? 'border-blue-500 text-blue-400 bg-blue-500/5'
-                  : 'border-slate-600 text-slate-500 hover:border-slate-400 hover:text-slate-300'
-              }`}
-            >
-              <span className="text-lg font-light">+</span> Create New Character
-            </button>
           </div>
         </nav>
 
