@@ -4,7 +4,7 @@ import { collection, query, where, onSnapshot, getDocs, doc, getDoc } from 'fire
 import { ArrowLeft, Trash2, LayoutDashboard, UserCheck, ShieldCheck, Sparkles, Users, User, Shield, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { handleFirestoreError } from '../lib/firestoreUtils';
-import { NORRATHS_KEEPERS_TIERS, Task } from '../lib/constants';
+import { NORRATHS_KEEPERS_TIERS, DARK_REIGN_TIERS, Task, getTiersByFaction, Faction } from '../lib/constants';
 
 interface Character {
   id: string;
@@ -36,7 +36,7 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [focusedObjectiveId, setFocusedObjectiveId] = useState<string | null>(null);
 
-  const allTasks: Task[] = NORRATHS_KEEPERS_TIERS.flatMap(t => t.tasks);
+  const allTasks: Task[] = [...NORRATHS_KEEPERS_TIERS.flatMap(t => t.tasks), ...DARK_REIGN_TIERS.flatMap(t => t.tasks)];
 
   useEffect(() => {
     if (!currentUserUid) return;
@@ -277,7 +277,7 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
                   <span className="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em]">Objective Register</span>
                 </div>
                 <div className="overflow-y-auto divide-y divide-slate-800 flex-1 custom-scrollbar scroll-smooth">
-                  {NORRATHS_KEEPERS_TIERS.map(tier => {
+                  {[...NORRATHS_KEEPERS_TIERS, ...DARK_REIGN_TIERS].map(tier => {
                     const tierTasks = tier.tasks.filter(t => 
                       t.name.toLowerCase().includes(ledgerSearch.toLowerCase()) || 
                       t.type.toLowerCase().includes(ledgerSearch.toLowerCase())
@@ -285,21 +285,25 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
                     
                     if (tierTasks.length === 0) return null;
 
+                    const isNK = tier.tasks[0]?.id.startsWith('nk');
+
                     return (
-                      <div key={tier.id} className="bg-black/20">
-                        <div className="px-4 py-2 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md">
-                          <span className="text-[9px] uppercase font-black text-amber-500/80 tracking-widest">{tier.name}</span>
-                          <span className="text-[8px] text-slate-600 font-bold">{tierTasks.length} OBJECTIVES</span>
+                      <div key={`${tier.id}-${isNK ? 'nk' : 'dr'}`} className="bg-black/20">
+                        <div className={`px-4 py-2 border-b border-slate-800 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md ${isNK ? 'bg-blue-900/40' : 'bg-red-900/40'}`}>
+                          <span className={`text-[9px] uppercase font-black tracking-widest ${isNK ? 'text-blue-400' : 'text-red-400'}`}>
+                            {isNK ? 'NK' : 'DR'} {tier.name}
+                          </span>
+                          <span className="text-[8px] text-slate-500 font-bold">{tierTasks.length} OBJECTIVES</span>
                         </div>
                         <div className="divide-y divide-slate-800/30">
                           {tierTasks.map(task => (
                             <button 
                               key={task.id}
                               onClick={() => setFocusedObjectiveId(task.id)}
-                              className={`w-full text-left p-4 transition-all hover:bg-amber-500/5 ${focusedObjectiveId === task.id ? 'bg-amber-500/10 border-r-4 border-amber-500' : ''}`}
+                              className={`w-full text-left p-4 transition-all hover:bg-slate-500/5 ${focusedObjectiveId === task.id ? (isNK ? 'bg-blue-500/10 border-r-4 border-blue-500' : 'bg-red-500/10 border-r-4 border-red-500') : ''}`}
                             >
-                              <div className="text-[9px] uppercase font-black text-amber-500/60 tracking-tighter mb-0.5">{task.type}</div>
-                              <div className={`text-sm font-bold ${focusedObjectiveId === task.id ? 'text-amber-300' : 'text-slate-300'}`}>{task.name}</div>
+                              <div className={`text-[9px] uppercase font-black tracking-tighter mb-0.5 ${isNK ? 'text-blue-500/60' : 'text-red-500/60'}`}>{task.type}</div>
+                              <div className={`text-sm font-bold ${focusedObjectiveId === task.id ? (isNK ? 'text-blue-300' : 'text-red-300') : 'text-slate-300'}`}>{task.name}</div>
                             </button>
                           ))}
                         </div>
@@ -323,21 +327,24 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
                       const task = allTasks.find(t => t.id === focusedObjectiveId);
                       if (!task) return null;
                       
+                      const isNKTask = task.id.startsWith('nk');
+                      const relevantFaction = isNKTask ? "Norrath's Keepers" : "Dark Reign";
+
                       const charsWhoNeed = allCharacters.filter(c => 
-                        c.faction === "Norrath's Keepers" && !c.completedTasks.includes(task.id)
+                        c.faction === relevantFaction && !c.completedTasks.includes(task.id)
                       );
                       const charsWhoHave = allCharacters.filter(c => 
-                        c.faction === "Norrath's Keepers" && c.completedTasks.includes(task.id)
+                        c.faction === relevantFaction && c.completedTasks.includes(task.id)
                       );
 
                       return (
                         <>
-                          <div className="glass-panel p-8 border-amber-500/30 bg-amber-500/5 relative overflow-hidden">
+                          <div className={`glass-panel p-8 relative overflow-hidden bg-opacity-5 ${isNKTask ? 'border-blue-500/30 bg-blue-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
                             <div className="absolute -top-4 -right-4 opacity-5">
-                              <Shield className="w-32 h-32 text-amber-400" />
+                              <Shield className={`w-32 h-32 ${isNKTask ? 'text-blue-400' : 'text-red-400'}`} />
                             </div>
                             <div className="relative z-10">
-                              <span className="px-3 py-1 bg-amber-900/30 border border-amber-500/30 text-amber-400 text-[10px] font-black uppercase rounded-full mb-4 inline-block tracking-widest">{task.type} Focus</span>
+                              <span className={`px-3 py-1 border text-[10px] font-black uppercase rounded-full mb-4 inline-block tracking-widest ${isNKTask ? 'bg-blue-900/30 border-blue-500/30 text-blue-400' : 'bg-red-900/30 border-red-500/30 text-red-400'}`}>{task.type} Focus ({isNKTask ? 'NK' : 'DR'})</span>
                               <h4 className="text-4xl font-serif font-bold text-white mb-2">{task.name}</h4>
                               <p className="text-sm text-slate-400 leading-relaxed max-w-2xl mb-8">Intelligence report for all tracked adventurers (including allies) regarding this specific chronicle objective.</p>
                               
@@ -421,32 +428,35 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
               </h3>
 
               <div className="space-y-10">
-                {NORRATHS_KEEPERS_TIERS.map(tier => {
+                {[...NORRATHS_KEEPERS_TIERS, ...DARK_REIGN_TIERS].map(tier => {
+                  const isNK = tier.tasks[0]?.id.startsWith('nk');
+                  const relevantFaction = isNK ? "Norrath's Keepers" : "Dark Reign";
+                  
                   const missingInTier = tier.tasks.filter(task => 
-                    selectedCharacters.some(char => char.faction === "Norrath's Keepers" && !char.completedTasks.includes(task.id))
+                    selectedCharacters.some(char => char.faction === relevantFaction && !char.completedTasks.includes(task.id))
                   );
 
                   if (missingInTier.length === 0) return null;
 
                   return (
-                    <div key={tier.id} className="glass-panel p-8 border-slate-700/50 bg-slate-900/10">
-                      <h4 className="font-serif text-2xl text-blue-300 mb-6 flex items-center justify-between">
-                        {tier.name}
-                        <span className="text-[10px] text-slate-500 uppercase font-sans tracking-[0.2em]">Tier Intelligence</span>
+                    <div key={`${tier.id}-${isNK ? 'nk' : 'dr'}`} className={`glass-panel p-8 border-slate-700/50 bg-slate-900/10 ${!isNK ? 'border-r-red-500/20' : 'border-r-blue-500/20'}`}>
+                      <h4 className={`font-serif text-2xl mb-6 flex items-center justify-between ${isNK ? 'text-blue-300' : 'text-red-300'}`}>
+                        {isNK ? 'NK' : 'DR'} {tier.name}
+                        <span className="text-[10px] text-slate-500 uppercase font-sans tracking-[0.2em]">{relevantFaction} Intel</span>
                       </h4>
                       
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {missingInTier.map(task => {
                           const charsWhoNeedThis = selectedCharacters.filter(char => 
-                            char.faction === "Norrath's Keepers" && !char.completedTasks.includes(task.id)
+                            char.faction === relevantFaction && !char.completedTasks.includes(task.id)
                           );
                           
                           return (
-                            <div key={task.id} className="bg-black/60 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 hover:border-emerald-500/30 transition-all group">
+                            <div key={task.id} className={`bg-black/60 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 transition-all group ${isNK ? 'hover:border-blue-500/30' : 'hover:border-red-500/30'}`}>
                               <div className="flex justify-between items-start">
                                 <div className="space-y-1">
-                                  <span className="text-[10px] uppercase font-black text-emerald-400/80 tracking-tighter">{task.type}</span>
-                                  <div className="text-lg font-bold text-white leading-tight group-hover:text-emerald-300 transition-colors">{task.name}</div>
+                                  <span className={`text-[10px] uppercase font-black tracking-tighter ${isNK ? 'text-blue-400/80' : 'text-red-400/80'}`}>{task.type}</span>
+                                  <div className={`text-lg font-bold text-white leading-tight transition-colors ${isNK ? 'group-hover:text-blue-300' : 'group-hover:text-red-300'}`}>{task.name}</div>
                                 </div>
                                 <div className="flex -space-x-2">
                                   {charsWhoNeedThis.map(char => {
@@ -458,7 +468,7 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
                                         className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-black uppercase ring-4 ring-black ${
                                           isFriend 
                                             ? 'bg-purple-900 border-purple-500 text-purple-300' 
-                                            : 'bg-slate-800 border-slate-700 text-blue-400'
+                                            : isNK ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-slate-800 border-slate-700 text-red-400'
                                         }`}
                                       >
                                         {char.name.charAt(0)}
@@ -477,7 +487,7 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
                                       className={`px-3 py-1 border-b-2 rounded text-[10px] font-black uppercase tracking-tighter ${
                                         isFriend 
                                           ? 'bg-purple-900/10 border-purple-500/30 text-purple-400 shadow-[0_2px_10px_rgba(168,85,247,0.1)]' 
-                                          : 'bg-blue-900/10 border-blue-500/30 text-blue-400'
+                                          : isNK ? 'bg-blue-900/10 border-blue-500/30 text-blue-400' : 'bg-red-900/10 border-red-500/30 text-red-400'
                                       }`}
                                     >
                                       {char.name}
@@ -503,13 +513,13 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
               
               <div className="space-y-4">
                 {selectedCharacters.map(char => {
-                  const isNKSide = char.faction === "Norrath's Keepers";
-                  const totalTasks = isNKSide ? allTasks.length : 0;
+                  const currentTiers = getTiersByFaction(char.faction as Faction);
+                  const totalTasks = currentTiers.flatMap(t => t.tasks).length;
                   const progress = totalTasks > 0 ? (char.completedTasks.length / totalTasks) * 100 : 0;
                   const isFriend = currentUserUid && char.userId !== currentUserUid;
                   
                   return (
-                    <div key={char.id} className={`fancy-card border-l-4 p-5 transition-all ${isFriend ? 'border-l-purple-500 bg-purple-900/5' : 'border-l-emerald-500 bg-emerald-900/5'}`}>
+                    <div key={char.id} className={`fancy-card border-l-4 p-5 transition-all ${isFriend ? 'border-l-purple-500 bg-purple-900/5' : char.faction === 'Dark Reign' ? 'border-l-red-500 bg-red-900/5' : 'border-l-emerald-500 bg-emerald-900/5'}`}>
                       <div className="flex justify-between items-center mb-4">
                         <div>
                           <div className="text-sm font-bold text-white group-hover:text-emerald-400 transition-colors">{char.name}</div>

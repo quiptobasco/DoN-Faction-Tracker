@@ -73,3 +73,66 @@ export const NORRATHS_KEEPERS_TIERS: Tier[] = [
     ]
   }
 ];
+
+export const DARK_REIGN_TIERS: Tier[] = [
+  {
+    id: 1,
+    name: 'Tier 1',
+    reputation: 'Indifferent',
+    tasks: [
+      { id: 'dr1-s1', name: 'The Burning Poison', type: 'Solo Task' },
+      { id: 'dr1-s2', name: 'Blood of the Basilisk', type: 'Solo Task' },
+      { id: 'dr1-s3', name: 'Clearing the Path', type: 'Solo Task' },
+      { id: 'dr1-g1', name: 'Have Note Will Travel', type: 'Group Mission' },
+    ]
+  },
+  {
+    id: 2,
+    name: 'Tier 2',
+    reputation: 'Amiable',
+    tasks: [
+      { id: 'dr2-s1', name: 'Blood from Sand', type: 'Solo Task' },
+      { id: 'dr2-s2', name: 'Army of Stone', type: 'Solo Task' },
+      { id: 'dr2-s3', name: 'Reap the Kirin Mind', type: 'Solo Task' },
+      { id: 'dr2-g1', name: 'Drake Eggs', type: 'Group Mission' },
+      { id: 'dr2-r1', name: 'Calling Emoush', type: 'Raid' },
+    ]
+  },
+  {
+    id: 3,
+    name: 'Tier 3',
+    reputation: 'High Amiable (300-500)',
+    tasks: [
+      { id: 'dr3-s1', name: 'Knowledge is Power', type: 'Solo Task' },
+      { id: 'dr3-s2', name: 'Muddy the Waters', type: 'Solo Task' },
+      { id: 'dr3-s3', name: 'Snowfoot Attack', type: 'Solo Task' },
+      { id: 'dr3-g1', name: 'The Gilded Scroll', type: 'Group Mission' },
+      { id: 'dr3-r1', name: 'Trial of Perseverance', type: 'Raid' },
+      { id: 'dr3-r2', name: 'Volkara’s Bite', type: 'Raid' },
+    ]
+  },
+  {
+    id: 4,
+    name: 'Tier 4',
+    reputation: 'Kindly',
+    tasks: [
+      { id: 'dr4-r1', name: 'Goblin Dojo', type: 'Raid' },
+      { id: 'dr4-r2', name: 'Guardian of the Sands', type: 'Raid' },
+      { id: 'dr4-r3', name: 'An End to the Storms', type: 'Raid' },
+    ]
+  },
+  {
+    id: 5,
+    name: 'Tier 5',
+    reputation: 'Warmly',
+    tasks: [
+      { id: 'dr5-g1', name: 'Rival Party', type: 'Group Mission' },
+      { id: 'dr5-r1', name: 'The Curse of Ju\'rek', type: 'Raid' },
+      { id: 'dr5-r2', name: 'In the Shadows', type: 'Raid' },
+    ]
+  }
+];
+
+export const getTiersByFaction = (faction: Faction): Tier[] => {
+  return faction === "Norrath's Keepers" ? NORRATHS_KEEPERS_TIERS : DARK_REIGN_TIERS;
+};

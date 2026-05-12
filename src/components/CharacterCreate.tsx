@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { db, auth } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Swords, ArrowLeft, Shield, CheckCircle2, Circle } from 'lucide-react';
-import { FACTIONS, NORRATHS_KEEPERS_TIERS, Task } from '../lib/constants';
+import { FACTIONS, getTiersByFaction, Task, Faction } from '../lib/constants';
 
 interface Props {
   onCancel: () => void;
@@ -37,6 +37,13 @@ export default function CharacterCreate({ onCancel, onSuccess }: Props) {
       setCompletedTasks(prev => prev.filter(id => !tierIds.includes(id)));
     }
   };
+
+  const handleFactionChange = (f: Faction) => {
+    setFaction(f);
+    setCompletedTasks([]); // Clear progress when switching factions to avoid task ID leaks
+  };
+
+  const currentTiers = getTiersByFaction(faction);
 
   const getReputationLabel = (value: number): string => {
     if (value >= 1100) return 'Ally';
@@ -125,14 +132,14 @@ export default function CharacterCreate({ onCancel, onSuccess }: Props) {
               <button
                 key={f}
                 type="button"
-                onClick={() => setFaction(f)}
+                onClick={() => handleFactionChange(f)}
                 className={`p-4 rounded-xl border transition-all flex flex-col items-center justify-center gap-2 ${
                   faction === f 
-                    ? 'glass-panel border-blue-500/50 bg-blue-900/20 text-white shadow-[0_0_15px_rgba(59,130,246,0.2)]' 
+                    ? `glass-panel shadow-[0_0_15px_rgba(59,130,246,0.2)] text-white ${f === 'Dark Reign' ? 'border-red-500/50 bg-red-900/20' : 'border-blue-500/50 bg-blue-900/20'}`
                     : 'bg-black/20 border-slate-700 text-slate-500 hover:border-slate-500 hover:text-slate-300'
                 }`}
               >
-                <Shield className={`w-6 h-6 ${faction === f ? 'text-blue-400' : 'opacity-30'}`} />
+                <Shield className={`w-6 h-6 ${faction === f ? (f === 'Dark Reign' ? 'text-red-400' : 'text-blue-400') : 'opacity-30'}`} />
                 <span className="font-serif text-lg tracking-tight">{f}</span>
               </button>
             ))}
@@ -181,17 +188,17 @@ export default function CharacterCreate({ onCancel, onSuccess }: Props) {
           <div className="flex items-center justify-between border-b border-slate-700 pb-3">
             <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-1">Chronicled Progress</label>
             <div className="text-[10px] text-blue-300 font-mono italic">
-              {completedTasks.length} / {NORRATHS_KEEPERS_TIERS.flatMap(t => t.tasks).length} Complete
+              {completedTasks.length} / {currentTiers.flatMap(t => t.tasks).length} Complete
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {NORRATHS_KEEPERS_TIERS.map((tier) => {
+            {currentTiers.map((tier) => {
               const tierCompleted = tier.tasks.filter(t => completedTasks.includes(t.id)).length;
               const allSelected = tierCompleted === tier.tasks.length;
 
               return (
-                <div key={tier.id} className="bg-black/20 rounded-xl p-5 border border-slate-800 space-y-4">
+                <div key={tier.id} className={`bg-black/20 rounded-xl p-5 border space-y-4 ${faction === 'Dark Reign' ? 'border-red-900/30' : 'border-slate-800'}`}>
                   <div className="flex justify-between items-center border-b border-slate-800 pb-2">
                     <div className="text-xs font-serif text-blue-200 uppercase tracking-tight">{tier.name}</div>
                     <button 
