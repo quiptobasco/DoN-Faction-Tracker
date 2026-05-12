@@ -162,14 +162,14 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row gap-8">
+      <div className="flex flex-col lg:flex-row gap-8">
         {/* Left: Search & Discovery */}
-        <div className="flex-1 space-y-6">
-          <div className="glass-panel p-6 border-purple-500/30 bg-purple-900/5">
+        <div className="w-full lg:flex-1 space-y-6 order-1 lg:order-1">
+          <div className="glass-panel p-4 md:p-6 border-purple-500/30 bg-purple-900/5">
             <h2 className="text-xl font-serif font-bold text-gold mb-4 flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-purple-400" /> Seek New Allies
             </h2>
-            <form onSubmit={handleAddFriend} className="flex gap-2">
+            <form onSubmit={handleAddFriend} className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input 
@@ -177,10 +177,10 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
                   value={friendCodeInput}
                   onChange={(e) => setFriendCodeInput(e.target.value)}
                   placeholder="ENTER FRIEND CODE..."
-                  className="fancy-input w-full pl-10 h-11 text-sm tracking-widest uppercase"
+                  className="fancy-input w-full pl-10 h-11 text-[10px] sm:text-sm tracking-widest uppercase"
                 />
               </div>
-              <button type="submit" className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold text-xs uppercase tracking-widest transition-all">
+              <button type="submit" className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all">
                 Send Request
               </button>
             </form>
@@ -253,7 +253,7 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
         </div>
 
         {/* Right: Actual Friends List */}
-        <div className="w-full md:w-96 space-y-4">
+        <div className="w-full lg:w-80 xl:w-96 space-y-4 order-2 lg:order-2">
           <h2 className="text-xl font-serif font-bold text-gold flex items-center gap-2">
             <UsersIcon className="w-5 h-5 text-blue-400" /> Your Fellowship
           </h2>

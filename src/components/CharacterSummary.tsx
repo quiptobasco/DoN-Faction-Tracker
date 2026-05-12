@@ -127,15 +127,15 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
   return (
     <div className="space-y-12">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h2 className="text-4xl font-serif font-bold text-emerald-400 stat-glow flex items-center gap-3">
-            <ShieldCheck className="w-10 h-10" /> Strategy Room
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="space-y-4">
+          <h2 className="text-2xl md:text-4xl font-serif font-bold text-emerald-400 stat-glow flex items-center gap-3">
+            <ShieldCheck className="w-8 h-8 md:w-10 md:h-10" /> Strategy Room
           </h2>
-          <div className="flex items-center gap-6 mt-3">
+          <div className="flex flex-wrap items-center gap-4 md:gap-6 mt-3">
             <button 
               onClick={() => setViewMode('coordinated')}
-              className={`text-xs uppercase font-black tracking-[0.2em] transition-all border-b-2 pb-1 ${
+              className={`text-[10px] md:text-xs uppercase font-black tracking-[0.2em] transition-all border-b-2 pb-1 ${
                 viewMode === 'coordinated' ? 'border-emerald-500 text-emerald-400 shadow-[0_4px_10px_rgba(16,185,129,0.2)]' : 'border-transparent text-slate-600 hover:text-slate-400'
               }`}
             >
@@ -143,7 +143,7 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
             </button>
             <button 
               onClick={() => setViewMode('lookup')}
-              className={`text-xs uppercase font-black tracking-[0.2em] transition-all border-b-2 pb-1 ${
+              className={`text-[10px] md:text-xs uppercase font-black tracking-[0.2em] transition-all border-b-2 pb-1 ${
                 viewMode === 'lookup' ? 'border-amber-500 text-amber-400 shadow-[0_4px_10px_rgba(245,158,11,0.2)]' : 'border-transparent text-slate-600 hover:text-slate-400'
               }`}
             >
@@ -152,17 +152,17 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
           </div>
         </div>
         
-        <div className="flex gap-4 self-start md:self-center">
+        <div className="flex gap-3 md:gap-4 self-start lg:self-center w-full lg:w-auto">
           <button 
             onClick={onClear}
             disabled={characterIds.length === 0}
-            className="flex items-center gap-2 px-6 py-2 bg-red-900/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-900/20 transition-all text-xs font-bold uppercase tracking-widest disabled:opacity-30"
+            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 md:px-6 py-2 bg-red-900/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-900/20 transition-all text-[10px] md:text-xs font-bold uppercase tracking-widest disabled:opacity-30"
           >
             <Trash2 className="w-4 h-4" /> Reset 
           </button>
           <button 
             onClick={onBack}
-            className="px-6 py-2 glass-panel border-slate-700 text-slate-300 rounded-lg hover:border-slate-500 hover:text-white transition-all text-xs font-bold uppercase tracking-widest"
+            className="flex-1 lg:flex-none flex items-center justify-center px-4 md:px-6 py-2 glass-panel border-slate-700 text-slate-300 rounded-lg hover:border-slate-500 hover:text-white transition-all text-[10px] md:text-xs font-bold uppercase tracking-widest"
           >
             Exit Room
           </button>
@@ -250,8 +250,8 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
           <div className="space-y-8">
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
               <div>
-                <h3 className="text-xl font-serif font-bold text-amber-400 flex items-center gap-3">
-                  <Search className="w-6 h-6 text-amber-500" /> Objective Focus
+                <h3 className="text-lg md:text-xl font-serif font-bold text-amber-400 flex items-center gap-3">
+                  <Search className="w-5 h-5 md:w-6 md:h-6 text-amber-500" /> Objective Focus
                 </h3>
                 <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-2">Reverse search: Identify every adventurer who needs a specific mission</p>
               </div>
@@ -272,7 +272,7 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
               {/* Objective List */}
-              <div className="glass-panel border-slate-800 bg-slate-900/10 overflow-hidden flex flex-col h-[600px]">
+              <div className="glass-panel border-slate-800 bg-slate-900/10 overflow-hidden flex flex-col h-[400px] lg:h-[600px]">
                 <div className="p-4 border-b border-slate-800 bg-black/40">
                   <span className="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em]">Objective Register</span>
                 </div>
@@ -339,14 +339,14 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
 
                       return (
                         <>
-                          <div className={`glass-panel p-8 relative overflow-hidden bg-opacity-5 ${isNKTask ? 'border-blue-500/30 bg-blue-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
+                          <div className={`glass-panel p-4 md:p-8 relative overflow-hidden bg-opacity-5 ${isNKTask ? 'border-blue-500/30 bg-blue-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
                             <div className="absolute -top-4 -right-4 opacity-5">
-                              <Shield className={`w-32 h-32 ${isNKTask ? 'text-blue-400' : 'text-red-400'}`} />
+                              <Shield className={`w-24 h-24 md:w-32 md:h-32 ${isNKTask ? 'text-blue-400' : 'text-red-400'}`} />
                             </div>
                             <div className="relative z-10">
-                              <span className={`px-3 py-1 border text-[10px] font-black uppercase rounded-full mb-4 inline-block tracking-widest ${isNKTask ? 'bg-blue-900/30 border-blue-500/30 text-blue-400' : 'bg-red-900/30 border-red-500/30 text-red-400'}`}>{task.type} Focus ({isNKTask ? 'NK' : 'DR'})</span>
-                              <h4 className="text-4xl font-serif font-bold text-white mb-2">{task.name}</h4>
-                              <p className="text-sm text-slate-400 leading-relaxed max-w-2xl mb-8">Intelligence report for all tracked adventurers (including allies) regarding this specific chronicle objective.</p>
+                              <span className={`px-3 py-1 border text-[9px] md:text-[10px] font-black uppercase rounded-full mb-4 inline-block tracking-widest ${isNKTask ? 'bg-blue-900/30 border-blue-500/30 text-blue-400' : 'bg-red-900/30 border-red-500/30 text-red-400'}`}>{task.type} Focus ({isNKTask ? 'NK' : 'DR'})</span>
+                              <h4 className="text-2xl md:text-4xl font-serif font-bold text-white mb-2">{task.name}</h4>
+                              <p className="text-xs md:text-sm text-slate-400 leading-relaxed max-w-2xl mb-8">Intelligence report for all tracked adventurers (including allies) regarding this specific chronicle objective.</p>
                               
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
@@ -421,10 +421,10 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
         </div>
       ) : characterIds.length > 0 ? (
         <div className="pt-12 border-t-2 border-slate-800 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-12">
-            <div className="xl:col-span-3 space-y-8">
-              <h3 className="text-xl font-serif font-bold text-gold flex items-center gap-3">
-                <LayoutDashboard className="w-6 h-6 text-emerald-400" /> Coordinated Mission Path
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 md:gap-12">
+            <div className="lg:col-span-3 space-y-8">
+              <h3 className="text-lg md:text-xl font-serif font-bold text-gold flex items-center gap-3">
+                <LayoutDashboard className="w-5 h-5 md:w-6 md:h-6 text-emerald-400" /> Coordinated Mission Path
               </h3>
 
               <div className="space-y-10">
@@ -439,10 +439,10 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
                   if (missingInTier.length === 0) return null;
 
                   return (
-                    <div key={`${tier.id}-${isNK ? 'nk' : 'dr'}`} className={`glass-panel p-8 border-slate-700/50 bg-slate-900/10 ${!isNK ? 'border-r-red-500/20' : 'border-r-blue-500/20'}`}>
-                      <h4 className={`font-serif text-2xl mb-6 flex items-center justify-between ${isNK ? 'text-blue-300' : 'text-red-300'}`}>
+                    <div key={`${tier.id}-${isNK ? 'nk' : 'dr'}`} className={`glass-panel p-4 md:p-8 border-slate-700/50 bg-slate-900/10 ${!isNK ? 'border-r-red-500/20' : 'border-r-blue-500/20'}`}>
+                      <h4 className={`font-serif text-xl md:text-2xl mb-6 flex items-center justify-between ${isNK ? 'text-blue-300' : 'text-red-300'}`}>
                         {isNK ? 'NK' : 'DR'} {tier.name}
-                        <span className="text-[10px] text-slate-500 uppercase font-sans tracking-[0.2em]">{relevantFaction} Intel</span>
+                        <span className="text-[8px] md:text-[10px] text-slate-500 uppercase font-sans tracking-[0.2em]">{relevantFaction.split(' ')[0]} Intel</span>
                       </h4>
                       
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -7,7 +7,7 @@ import CharacterList from './components/CharacterList';
 import CharacterCreate from './components/CharacterCreate';
 import CharacterDetails from './components/CharacterDetails';
 import CharacterSummary from './components/CharacterSummary';
-import { Swords, LogOut, Users, ShieldCheck } from 'lucide-react';
+import { Swords, LogOut, Users, ShieldCheck, Menu, X as CloseIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import FriendsList from './components/FriendsList';
 import FriendCharacters from './components/FriendCharacters';
@@ -21,6 +21,13 @@ export default function App() {
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
   const [summaryIds, setSummaryIds] = useState<string[]>([]);
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    // Close sidebar on view change on mobile
+    setIsSidebarOpen(false);
+  }, [view]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
@@ -72,9 +79,40 @@ export default function App() {
   const handleLogout = () => auth.signOut();
 
   return (
-    <div className="flex bg-[#161b22] text-parchment h-screen overflow-hidden">
-      {/* Sidebar - Persistent if logged in */}
-      <aside className="w-72 bg-[#161b22] border-r border-slate-700 flex flex-col p-6 shadow-2xl shrink-0">
+    <div className="flex flex-col lg:flex-row bg-[#161b22] text-parchment h-screen overflow-hidden">
+      {/* Mobile Header */}
+      <header className="lg:hidden flex items-center justify-between p-4 bg-[#161b22] border-b border-slate-700 z-50">
+        <div className="flex items-center gap-2" onClick={() => setView('list')}>
+          <Swords className="w-6 h-6 text-gold" />
+          <h1 className="text-xl font-serif font-bold text-gold faction-gold">Norrath Tracker</h1>
+        </div>
+        <button 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="p-2 text-gold"
+        >
+          {isSidebarOpen ? <CloseIcon className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+      </header>
+
+      {/* Sidebar Mobile Backdrop */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed inset-y-0 left-0 w-72 bg-[#161b22] border-r border-slate-700 flex flex-col p-6 shadow-2xl shrink-0 z-50 transition-transform duration-300 transform 
+        lg:relative lg:translate-x-0 
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
         <div className="mb-10 text-center">
           <div className="text-[10px] tracking-[0.3em] uppercase text-slate-500 mb-1">Adventurer</div>
           <div className="text-sm font-sans font-medium text-slate-300 truncate">{user.email}</div>
@@ -151,7 +189,7 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col p-8 overflow-y-auto scroll-bg">
+      <main className="flex-1 flex flex-col p-4 md:p-8 overflow-y-auto scroll-bg">
         <div className="max-w-5xl mx-auto w-full">
           <AnimatePresence mode="wait">
             {view === 'list' && (

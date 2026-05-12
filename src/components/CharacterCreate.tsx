@@ -93,8 +93,8 @@ export default function CharacterCreate({ onCancel, onSuccess }: Props) {
         <h2 className="text-2xl font-serif font-bold text-gold">Create New Character</h2>
       </div>
 
-      <form onSubmit={handleSubmit} className="fancy-card p-8 space-y-8 border-t-2 border-t-blue-500/30">
-        <div className="grid gap-6 md:grid-cols-2">
+      <form onSubmit={handleSubmit} className="glass-panel p-4 md:p-8 space-y-6 md:space-y-8 border-t-2 border-t-blue-500/30">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
           <div className="space-y-2">
             <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-1">
               Adventurer Name
@@ -127,7 +127,7 @@ export default function CharacterCreate({ onCancel, onSuccess }: Props) {
 
         <div className="space-y-3">
           <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-1">Faction Allegiance</label>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {FACTIONS.map((f) => (
               <button
                 key={f}

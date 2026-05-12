@@ -156,24 +156,24 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
   };
 
   return (
-    <div className="space-y-8 pb-12">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gold" id="back_button_id">
+    <div className="space-y-6 md:space-y-8 pb-12">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+        <div className="flex items-start md:items-center gap-4">
+          <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition-colors text-gold shrink-0 mt-1 md:mt-0" id="back_button_id">
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <div>
-            <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
               {isEditingProfile ? (
                 <input 
                   type="text"
                   value={editedName}
                   onChange={(e) => setEditedName(e.target.value)}
-                  className="text-4xl font-serif font-bold bg-white/5 border-b-2 border-blue-500 text-white outline-none px-2 focus:bg-white/10 transition-colors max-w-md"
+                  className="text-2xl md:text-4xl font-serif font-bold bg-white/5 border-b-2 border-blue-500 text-white outline-none px-2 focus:bg-white/10 transition-colors w-full md:max-w-md"
                   id="edit_name_input_id"
                 />
               ) : (
-                <h2 className="text-4xl font-serif font-bold faction-gold tracking-tight" id="character_name_id">{character.name}</h2>
+                <h2 className="text-2xl md:text-4xl font-serif font-bold faction-gold tracking-tight truncate" id="character_name_id">{character.name}</h2>
               )}
               {isOwner && (
                 <div className="flex items-center gap-2">
@@ -211,10 +211,10 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-6 mt-1">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 mt-2 md:mt-1">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] uppercase tracking-widest text-slate-500">Faction:</span>
-                <span className="text-sm text-blue-300 font-bold tracking-wide uppercase">{character.faction}</span>
+                <span className="text-xs md:text-sm text-blue-300 font-bold tracking-wide uppercase">{character.faction}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] uppercase tracking-widest text-slate-500">Level:</span>
@@ -225,24 +225,24 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
                     max="125"
                     value={editedLevel}
                     onChange={(e) => setEditedLevel(parseInt(e.target.value) || 1)}
-                    className="w-16 bg-white/5 border-b border-blue-500/50 text-blue-300 font-bold px-1 outline-none"
+                    className="w-16 bg-white/5 border-b border-blue-500/50 text-blue-300 font-bold px-1 outline-none text-sm"
                     id="edit_level_input_id"
                   />
                 ) : (
-                  <span className="text-sm text-blue-300 font-bold tracking-wide">{character.level}</span>
+                  <span className="text-xs md:text-sm text-blue-300 font-bold tracking-wide">{character.level}</span>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] uppercase tracking-widest text-slate-500">Standing:</span>
                 {isEditingProfile ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                     <input 
                       type="number"
                       min="-2000"
                       max="2000"
                       value={editedReputationValue}
                       onChange={(e) => setEditedReputationValue(parseInt(e.target.value) || 0)}
-                      className="w-20 bg-white/5 border-b border-emerald-500/50 text-emerald-400 font-bold px-1 outline-none"
+                      className="w-20 bg-white/5 border-b border-emerald-500/50 text-emerald-400 font-bold px-1 outline-none text-sm"
                       id="edit_reputation_input_id"
                     />
                     <span className="text-[9px] text-slate-600 font-mono italic">
@@ -250,7 +250,7 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
                     </span>
                   </div>
                 ) : (
-                  <span className="text-sm text-emerald-400 font-bold tracking-wide uppercase stat-glow">
+                  <span className="text-xs md:text-sm text-emerald-400 font-bold tracking-wide uppercase stat-glow">
                     {character.reputation} {character.reputationValue !== undefined && `(${character.reputationValue > 0 ? '+' : ''}${character.reputationValue})`}
                   </span>
                 )}
@@ -259,23 +259,25 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
           </div>
         </div>
         
-        <div className="text-right flex flex-col items-end">
-          <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Overall Progression</div>
-          <div className="w-48 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700 mb-2">
-            <div 
-              className="h-full bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_10px_#3b82f6] transition-all duration-500" 
-              style={{ width: `${(editedTaskIds.length / totalTasks) * 100}%` }}
-            ></div>
+        <div className="flex flex-col items-start lg:items-end w-full lg:w-auto">
+          <div className="flex flex-col items-start lg:items-end w-full">
+            <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1 lg:text-right">Overall Progression</div>
+            <div className="w-full lg:w-48 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700 mb-2">
+              <div 
+                className="h-full bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_10px_#3b82f6] transition-all duration-500" 
+                style={{ width: `${(editedTaskIds.length / totalTasks) * 100}%` }}
+              ></div>
+            </div>
+            <div className="text-xs text-blue-300 font-mono lg:text-right">{Math.round((editedTaskIds.length / totalTasks) * 100)}% Current</div>
           </div>
-          <div className="text-xs text-blue-300 font-mono">{Math.round((editedTaskIds.length / totalTasks) * 100)}% Current</div>
           
           {isOwner ? (
-            <div className="flex gap-4 mt-4">
+            <div className="flex flex-wrap gap-3 mt-4 w-full lg:w-auto">
               {hasChanges && (
                 <button
                   onClick={discardChanges}
                   disabled={saving}
-                  className="px-4 py-2 rounded-lg font-sans font-bold border border-slate-700 text-slate-400 hover:bg-slate-800 transition-all"
+                  className="flex-1 lg:flex-none px-4 py-2 rounded-lg font-sans font-bold border border-slate-700 text-slate-400 hover:bg-slate-800 transition-all text-xs"
                   id="discard_changes_button_id"
                 >
                   Discard
@@ -284,19 +286,19 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
               <button
                 onClick={handleUpdate}
                 disabled={!hasChanges || saving}
-                className={`px-6 py-2 rounded-lg font-sans font-bold transition-all flex items-center gap-2 ${
+                className={`flex-1 lg:flex-none px-6 py-2 rounded-lg font-sans font-bold transition-all flex items-center justify-center gap-2 text-xs ${
                   hasChanges 
                     ? 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' 
                     : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
                 }`}
                 id="update_chronicles_button_id"
               >
-                {saving ? 'Saving...' : (isEditingProfile ? 'Save Profile & Progress' : 'Update Chronicles')}
-                {!saving && hasChanges && <Save className="w-4 h-4" />}
+                {saving ? 'Saving...' : (isEditingProfile ? 'Save All' : 'Update Marks')}
+                {!saving && hasChanges && <Save className="w-3 h-3" />}
               </button>
             </div>
           ) : (
-            <div className="mt-4 px-4 py-2 bg-blue-900/10 border border-blue-500/20 rounded-lg text-[10px] text-blue-400 font-bold uppercase tracking-widest">
+            <div className="mt-4 w-full text-center lg:text-right px-4 py-2 bg-blue-900/10 border border-blue-500/20 rounded-lg text-[10px] text-blue-400 font-bold uppercase tracking-widest">
               Read-Only Allied Intel
             </div>
           )}
