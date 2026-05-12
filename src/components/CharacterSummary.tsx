@@ -12,7 +12,6 @@ interface Character {
   faction: string;
   userId: string;
   completedTasks: string[];
-  level: number;
 }
 
 interface FriendProfile {
@@ -587,7 +586,6 @@ function CharacterMiniCard({ char, isSelected, onToggle, isFriend }: { char: Cha
         </div>
         <div>
           <div className={`text-xs font-bold transition-colors ${isSelected ? 'text-white' : 'group-hover:text-slate-300'}`}>{char.name}</div>
-          <div className="text-[9px] uppercase tracking-widest opacity-60">Level {char.level}</div>
         </div>
       </div>
       {isFriend && !isSelected && <div className="text-[8px] uppercase tracking-tighter text-purple-500 font-black">Allied</div>}

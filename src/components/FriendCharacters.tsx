@@ -6,7 +6,6 @@ import { Shield, Sparkles } from 'lucide-react';
 interface Character {
   id: string;
   name: string;
-  level: number;
   faction: string;
   reputation: string;
 }
@@ -91,7 +90,7 @@ export default function FriendCharacters({ friendId, selectedIds = [], onSelecti
                   <div>
                     <h4 className={`text-lg font-bold transition-colors ${isSelected ? 'text-emerald-300' : 'text-blue-300'}`}>{char.name}</h4>
                     <div className="text-[10px] text-slate-500 uppercase tracking-widest flex gap-2">
-                      Level {char.level} • {char.faction}
+                      {char.faction}
                     </div>
                     <div className="mt-2 text-xs font-serif italic text-slate-400">
                       "{char.reputation}"

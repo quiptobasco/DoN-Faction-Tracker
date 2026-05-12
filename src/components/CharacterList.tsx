@@ -7,7 +7,6 @@ import { PlusCircle, Shield, User, Trash2 } from 'lucide-react';
 interface Character {
   id: string;
   name: string;
-  level: number;
   faction: string;
   reputation: string;
   reputationValue?: number;
@@ -103,7 +102,7 @@ export default function CharacterList({ onAddCharacter, onSelectCharacter }: Pro
                 <div className="relative z-10">
                   <h3 className="text-xl font-bold text-white group-hover:text-blue-300 transition-colors">{char.name}</h3>
                   <div className="flex items-center gap-2 text-[10px] text-blue-400 uppercase tracking-widest mt-1">
-                    Level {char.level} <span className="opacity-30">•</span> {char.faction}
+                    {char.faction}
                   </div>
                   <div className="mt-4 pt-4 border-t border-slate-700/50 flex justify-between items-center">
                     <div className="text-[10px] uppercase tracking-tighter text-slate-500">Reputation</div>

@@ -32,14 +32,13 @@
       "properties": {
         "userId": { "type": "string" },
         "name": { "type": "string" },
-        "level": { "type": "number" },
         "faction": { "type": "string", "enum": ["Norrath's Keepers", "Dark Reign"] },
         "reputation": { "type": "string" },
         "completedTasks": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["userId", "name", "level", "faction", "reputation", "completedTasks"]
+      "required": ["userId", "name", "faction", "reputation", "completedTasks"]
     }
   },
   "firestore": {

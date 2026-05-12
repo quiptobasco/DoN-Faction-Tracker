@@ -8,7 +8,6 @@ import { getTiersByFaction, Tier, Task, Faction } from '../lib/constants';
 interface Character {
   id: string;
   name: string;
-  level: number;
   faction: string;
   reputation: string;
   reputationValue?: number;
@@ -29,7 +28,6 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editedName, setEditedName] = useState('');
-  const [editedLevel, setEditedLevel] = useState(1);
   const [editedReputationValue, setEditedReputationValue] = useState(0);
 
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -43,7 +41,6 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
         // Initialize edited states ONLY on first load or if not currently editing
         setEditedTaskIds(prev => (prev.length === 0 && !character) ? data.completedTasks : prev);
         setEditedName(prev => (prev === '' && !character) ? data.name : prev);
-        setEditedLevel(prev => (prev === 0 && !character) ? data.level : prev);
         setEditedReputationValue(prev => (prev === 0 && !character) ? (data.reputationValue ?? 0) : prev);
       }
       setLoading(false);
@@ -92,7 +89,6 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
     try {
       await updateDoc(doc(db, 'characters', characterId), {
         name: editedName,
-        level: editedLevel,
         reputationValue: editedReputationValue,
         reputation: getReputationLabel(editedReputationValue),
         completedTasks: editedTaskIds,
@@ -142,7 +138,6 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
   const hasChanges = 
     JSON.stringify([...editedTaskIds].sort()) !== JSON.stringify([...character.completedTasks].sort()) ||
     editedName !== character.name ||
-    editedLevel !== character.level ||
     editedReputationValue !== (character.reputationValue ?? 0);
 
   const totalTasks = currentFactionTiers.flatMap(t => t.tasks).length;
@@ -150,7 +145,6 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
   const discardChanges = () => {
     setEditedTaskIds(character.completedTasks);
     setEditedName(character.name);
-    setEditedLevel(character.level);
     setEditedReputationValue(character.reputationValue ?? 0);
     setIsEditingProfile(false);
   };
@@ -215,22 +209,6 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
               <div className="flex items-center gap-2">
                 <span className="text-[10px] uppercase tracking-widest text-slate-500">Faction:</span>
                 <span className="text-xs md:text-sm text-blue-300 font-bold tracking-wide uppercase">{character.faction}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase tracking-widest text-slate-500">Level:</span>
-                {isEditingProfile ? (
-                  <input 
-                    type="number"
-                    min="1"
-                    max="125"
-                    value={editedLevel}
-                    onChange={(e) => setEditedLevel(parseInt(e.target.value) || 1)}
-                    className="w-16 bg-white/5 border-b border-blue-500/50 text-blue-300 font-bold px-1 outline-none text-sm"
-                    id="edit_level_input_id"
-                  />
-                ) : (
-                  <span className="text-xs md:text-sm text-blue-300 font-bold tracking-wide">{character.level}</span>
-                )}
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] uppercase tracking-widest text-slate-500">Standing:</span>

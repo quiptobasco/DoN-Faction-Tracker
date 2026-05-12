@@ -11,7 +11,6 @@ interface Props {
 
 export default function CharacterCreate({ onCancel, onSuccess }: Props) {
   const [name, setName] = useState('');
-  const [level, setLevel] = useState(70);
   const [faction, setFaction] = useState(FACTIONS[0]);
   const [reputationValue, setReputationValue] = useState(0);
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
@@ -68,7 +67,6 @@ export default function CharacterCreate({ onCancel, onSuccess }: Props) {
       await addDoc(collection(db, 'characters'), {
         userId: auth.currentUser.uid,
         name,
-        level: Number(level),
         faction,
         reputation: getReputationLabel(reputationValue),
         reputationValue: Number(reputationValue),
@@ -106,21 +104,6 @@ export default function CharacterCreate({ onCancel, onSuccess }: Props) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Thalric Ironheart"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-1">
-              Experience Level
-            </label>
-            <input
-              type="number"
-              required
-              min={1}
-              max={125}
-              className="fancy-input w-full"
-              value={level}
-              onChange={(e) => setLevel(Number(e.target.value))}
             />
           </div>
         </div>
