@@ -84,7 +84,7 @@ export default function App() {
       <header className="lg:hidden flex items-center justify-between p-4 bg-[#161b22] border-b border-slate-700 z-50">
         <div className="flex items-center gap-2" onClick={() => setView('list')}>
           <Swords className="w-6 h-6 text-gold" />
-          <h1 className="text-xl font-serif font-bold text-gold faction-gold">Norrath Tracker</h1>
+          <h1 className="text-xl font-serif font-bold text-gold faction-gold">DoN Tracker</h1>
         </div>
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -121,7 +121,7 @@ export default function App() {
         <nav className="flex-1 space-y-4">
           <div className="flex items-center gap-3 mb-6 cursor-pointer group" onClick={() => setView('list')}>
             <Swords className="w-8 h-8 text-gold group-hover:rotate-12 transition-transform" />
-            <h1 className="text-2xl font-serif font-bold text-gold faction-gold">Norrath Tracker</h1>
+            <h1 className="text-2xl font-serif font-bold text-gold faction-gold">DoN Tracker</h1>
           </div>
 
           <div className="flex flex-col gap-2">
