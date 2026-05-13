@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { Shield, Sparkles } from 'lucide-react';
+import { getReputationClasses } from '../lib/repUtils';
 
 interface Character {
   id: string;
   name: string;
   faction: string;
   reputation: string;
+  reputationValue?: number;
 }
 
 interface Props {
@@ -92,8 +94,8 @@ export default function FriendCharacters({ friendId, selectedIds = [], onSelecti
                     <div className="text-[10px] text-slate-500 uppercase tracking-widest flex gap-2">
                       {char.faction}
                     </div>
-                    <div className="mt-2 text-xs font-serif italic text-slate-400">
-                      "{char.reputation}"
+                    <div className={`mt-2 text-xs transition-all duration-300 ${getReputationClasses(char.reputationValue ?? 0)}`}>
+                      {char.reputation} {char.reputationValue !== undefined && `(${char.reputationValue > 0 ? '+' : ''}${char.reputationValue})`}
                     </div>
                   </div>
                 </div>

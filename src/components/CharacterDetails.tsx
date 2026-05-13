@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { db } from '../lib/firebase';
 import { doc, getDoc, updateDoc, onSnapshot, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { ArrowLeft, CheckCircle2, Circle, Shield, Trophy, Trash2, Edit2, X, Save } from 'lucide-react';
 import { auth } from '../lib/firebase';
-import { getTiersByFaction, Tier, Task, Faction } from '../lib/constants';
+import { getTiersByFaction, Tier, Task, Faction, MIN_REPUTATION, MAX_REPUTATION } from '../lib/constants';
+import { getReputationLabel, getReputationClasses } from '../lib/repUtils';
+import { handleFirestoreError } from '../lib/firestoreUtils';
 
 interface Character {
   id: string;
@@ -11,8 +13,11 @@ interface Character {
   faction: string;
   reputation: string;
   reputationValue?: number;
+  hasStartedDoN?: boolean;
   completedTasks: string[];
   userId: string;
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 interface Props {
@@ -28,9 +33,12 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editedName, setEditedName] = useState('');
-  const [editedReputationValue, setEditedReputationValue] = useState(0);
+  const [editedReputationValue, setEditedReputationValue] = useState<number | ''>(0);
+  const [editedHasStartedDoN, setEditedHasStartedDoN] = useState(true);
 
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  
+  const initialLoadRef = useRef(true);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'characters', characterId), (snapshot) => {
@@ -38,18 +46,25 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
         const data = { id: snapshot.id, ...snapshot.data() } as Character;
         setCharacter(data);
         
-        // Initialize edited states ONLY on first load or if not currently editing
-        setEditedTaskIds(prev => (prev.length === 0 && !character) ? data.completedTasks : prev);
-        setEditedName(prev => (prev === '' && !character) ? data.name : prev);
-        setEditedReputationValue(prev => (prev === 0 && !character) ? (data.reputationValue ?? 0) : prev);
+        // Initialize edited states only on first load
+        if (initialLoadRef.current) {
+          setEditedTaskIds(data.completedTasks || []);
+          setEditedName(data.name || '');
+          setEditedReputationValue(data.reputationValue ?? 0);
+          setEditedHasStartedDoN(data.hasStartedDoN ?? true);
+          initialLoadRef.current = false;
+        }
       }
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, 'get', `characters/${characterId}`);
     });
 
     return unsubscribe;
-  }, [characterId, character]);
+  }, [characterId]);
 
   const toggleTask = (taskId: string) => {
+    if (character && character.hasStartedDoN === false) return;
     setEditedTaskIds(prev => 
       prev.includes(taskId)
         ? prev.filter(id => id !== taskId)
@@ -58,6 +73,7 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
   };
 
   const toggleTierGroup = (tierTasks: Task[], select: boolean) => {
+    if (character && character.hasStartedDoN === false) return;
     const tierIds = tierTasks.map(t => t.id);
     if (select) {
       // Add all missing ids from this tier
@@ -71,32 +87,21 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
     }
   };
 
-  const getReputationLabel = (value: number): string => {
-    if (value >= 1100) return 'Ally';
-    if (value >= 750) return 'Warmly';
-    if (value >= 500) return 'Kindly';
-    if (value >= 100) return 'Amiably';
-    if (value >= 0) return 'Indifferent';
-    if (value >= -100) return 'Apprehensively';
-    if (value >= -500) return 'Dubiously';
-    if (value >= -750) return 'Threateningly';
-    return 'Scowls (Ready to Attack)';
-  };
-
   const handleUpdate = async () => {
     if (!character) return;
     setSaving(true);
     try {
       await updateDoc(doc(db, 'characters', characterId), {
         name: editedName,
-        reputationValue: editedReputationValue,
-        reputation: getReputationLabel(editedReputationValue),
+        reputationValue: Number(editedReputationValue),
+        reputation: getReputationLabel(Number(editedReputationValue)),
+        hasStartedDoN: editedHasStartedDoN,
         completedTasks: editedTaskIds,
         updatedAt: serverTimestamp()
       });
       setIsEditingProfile(false);
-    } catch (err) {
-      console.error('Error updating character:', err);
+    } catch (err: any) {
+      handleFirestoreError(err, 'update', `characters/${characterId}`);
     } finally {
       setSaving(false);
     }
@@ -115,8 +120,8 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
     try {
       await deleteDoc(doc(db, 'characters', characterId));
       onBack();
-    } catch (err) {
-      console.error('Error deleting character:', err);
+    } catch (err: any) {
+      handleFirestoreError(err, 'delete', `characters/${characterId}`);
     } finally {
       setSaving(false);
     }
@@ -138,7 +143,8 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
   const hasChanges = 
     JSON.stringify([...editedTaskIds].sort()) !== JSON.stringify([...character.completedTasks].sort()) ||
     editedName !== character.name ||
-    editedReputationValue !== (character.reputationValue ?? 0);
+    editedHasStartedDoN !== (character.hasStartedDoN ?? true) ||
+    Number(editedReputationValue) !== (character.reputationValue ?? 0);
 
   const totalTasks = currentFactionTiers.flatMap(t => t.tasks).length;
 
@@ -146,6 +152,7 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
     setEditedTaskIds(character.completedTasks);
     setEditedName(character.name);
     setEditedReputationValue(character.reputationValue ?? 0);
+    setEditedHasStartedDoN(character.hasStartedDoN ?? true);
     setIsEditingProfile(false);
   };
 
@@ -207,7 +214,7 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 mt-2 md:mt-1">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase tracking-widest text-slate-500">Faction:</span>
+                <span className="text-[10px] uppercase tracking-widest text-slate-500">{character.hasStartedDoN === false ? 'Assumed Faction:' : 'Faction:'}</span>
                 <span className="text-xs md:text-sm text-blue-300 font-bold tracking-wide uppercase">{character.faction}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -216,23 +223,60 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                     <input 
                       type="number"
-                      min="-2000"
-                      max="2000"
+                      min={MIN_REPUTATION}
+                      max={MAX_REPUTATION}
                       value={editedReputationValue}
-                      onChange={(e) => setEditedReputationValue(parseInt(e.target.value) || 0)}
-                      className="w-20 bg-white/5 border-b border-emerald-500/50 text-emerald-400 font-bold px-1 outline-none text-sm"
+                      disabled={!editedHasStartedDoN}
+                      onChange={(e) => {
+                        if (e.target.value === '') {
+                          setEditedReputationValue('');
+                          return;
+                        }
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val)) {
+                          setEditedReputationValue(Math.max(MIN_REPUTATION, Math.min(MAX_REPUTATION, val)));
+                        }
+                      }}
+                      className={`w-20 bg-white/5 border-b border-emerald-500/50 text-emerald-400 font-bold px-1 outline-none text-sm ${!editedHasStartedDoN ? 'opacity-50 cursor-not-allowed' : ''}`}
                       id="edit_reputation_input_id"
                     />
                     <span className="text-[9px] text-slate-600 font-mono italic">
-                      {getReputationLabel(editedReputationValue)}
+                      {getReputationLabel(Number(editedReputationValue))}
+                      {!editedHasStartedDoN && ' (Locked)'}
                     </span>
                   </div>
                 ) : (
-                  <span className="text-xs md:text-sm text-emerald-400 font-bold tracking-wide uppercase stat-glow">
+                  <span className={`text-xs md:text-sm ${getReputationClasses(character.reputationValue ?? 0)} transition-all duration-300`}>
                     {character.reputation} {character.reputationValue !== undefined && `(${character.reputationValue > 0 ? '+' : ''}${character.reputationValue})`}
+                    {character.hasStartedDoN === false && <span className="ml-2 text-[8px] px-1 bg-red-900/40 border border-red-500/30 text-red-300 rounded font-black tracking-widest">NOT STARTED</span>}
                   </span>
                 )}
               </div>
+              {isEditingProfile && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newState = !editedHasStartedDoN;
+                      setEditedHasStartedDoN(newState);
+                      if (!newState) {
+                        setEditedReputationValue(-100);
+                        setEditedTaskIds([]);
+                      }
+                    }}
+                    className={`flex items-center gap-2 px-2 py-1 rounded border transition-all ${
+                      !editedHasStartedDoN 
+                        ? 'bg-blue-900/20 border-blue-500/40 text-blue-300' 
+                        : 'bg-black/20 border-slate-700 text-slate-500'
+                    }`}
+                  >
+                    <div className={`w-3 h-3 rounded-sm border flex items-center justify-center ${!editedHasStartedDoN ? 'bg-blue-500 border-blue-400' : 'border-slate-600'}`}>
+                      {!editedHasStartedDoN && <CheckCircle2 className="w-2 h-2 text-white" />}
+                    </div>
+                    <span className="text-[9px] font-bold uppercase tracking-widest">Haven't started DoN rep</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -287,9 +331,10 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
         {currentFactionTiers.map((tier) => {
           const completedCount = tier.tasks.filter(t => editedTaskIds.includes(t.id)).length;
           const allSelected = completedCount === tier.tasks.length;
+          const isLocked = character.hasStartedDoN === false;
           
           return (
-            <div key={tier.id} className={`fancy-card border-t-2 ${character.faction === "Dark Reign" ? 'border-t-red-500/30' : 'border-t-blue-500/30'}`}>
+            <div key={tier.id} className={`fancy-card border-t-2 ${character.faction === "Dark Reign" ? 'border-t-red-500/30' : 'border-t-blue-500/30'} ${isLocked ? 'opacity-40 grayscale' : ''}`}>
               <div className="border-b border-slate-700 pb-3 mb-4 space-y-2">
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-serif text-blue-200">{tier.name}: {tier.reputation}</h3>
@@ -297,7 +342,7 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
                     {completedCount}/{tier.tasks.length}
                   </span>
                 </div>
-                {isOwner && (
+                {isOwner && !isLocked && (
                   <div className="flex gap-3">
                     <button 
                       onClick={() => toggleTierGroup(tier.tasks, !allSelected)}
@@ -310,6 +355,11 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
                     </button>
                   </div>
                 )}
+                {isLocked && (
+                  <div className="text-[9px] text-red-400/60 font-black uppercase tracking-widest">
+                    Faction Standing Required
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -318,14 +368,14 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
                   return (
                     <label 
                       key={task.id}
-                      className="flex items-center gap-3 cursor-pointer group"
+                      className={`flex items-center gap-3 group ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       <input 
                         type="checkbox"
                         checked={isCompleted}
-                        disabled={!isOwner}
+                        disabled={!isOwner || isLocked}
                         onChange={() => toggleTask(task.id)}
-                        className={`task-checkbox shrink-0 ${!isOwner ? 'cursor-not-allowed opacity-50' : ''}`}
+                        className={`task-checkbox shrink-0 ${(!isOwner || isLocked) ? 'cursor-not-allowed opacity-50' : ''}`}
                         id={`task_checkbox_${task.id}_id`}
                       />
                       <div className={`text-sm transition-colors ${

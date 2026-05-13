@@ -37,26 +37,25 @@ service cloud.firestore {
       function isValidCharacter(data) {
         return data.userId == request.auth.uid &&
                data.name is string && data.name.size() > 0 && data.name.size() <= 64 &&
-               data.faction in ["Norrath's Keepers", "Dark Reign"] &&
+               data.faction in ["Norrath's Keeper", "Norrath's Keepers", "Dark Reign"] &&
                data.reputation is string &&
                data.reputationValue is number &&
                data.reputationValue >= -2000 && data.reputationValue <= 2000 &&
-               data.completedTasks is list;
+               data.completedTasks is list &&
+               (!('hasStartedDoN' in data) || data.hasStartedDoN is bool);
       }
 
       allow create: if isSignedIn() && 
                       isValidCharacter(request.resource.data) &&
                       request.resource.data.keys().hasAll(['userId', 'name', 'faction', 'reputation', 'reputationValue', 'completedTasks', 'createdAt', 'updatedAt']) &&
-                      request.resource.data.keys().size() == 8 &&
+                      (request.resource.data.keys().size() >= 8 && request.resource.data.keys().size() <= 11) &&
                       request.resource.data.createdAt == request.time &&
                       request.resource.data.updatedAt == request.time;
       
       allow update: if isSignedIn() && isOwner(resource.data.userId) &&
-                      isValidCharacter(request.resource.data) &&
                       request.resource.data.userId == resource.data.userId &&
-                      request.resource.data.createdAt == resource.data.createdAt &&
-                      request.resource.data.updatedAt == request.time &&
-                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'faction', 'reputation', 'reputationValue', 'completedTasks', 'updatedAt']);
+                      (!('createdAt' in resource.data) || request.resource.data.createdAt == resource.data.createdAt) &&
+                      request.resource.data.updatedAt == request.time;
       
       allow delete: if isSignedIn() && isOwner(resource.data.userId);
     }

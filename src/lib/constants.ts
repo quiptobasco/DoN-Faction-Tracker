@@ -1,5 +1,8 @@
 export const FACTIONS = ["Norrath's Keepers", "Dark Reign"] as const;
 
+export const MIN_REPUTATION = -2000;
+export const MAX_REPUTATION = 2000;
+
 export type Faction = typeof FACTIONS[number];
 
 export interface Task {
