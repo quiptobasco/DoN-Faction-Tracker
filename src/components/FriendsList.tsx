@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db, auth } from '../lib/firebase';
 import { handleFirestoreError } from '../lib/firestoreUtils';
 import { collection, query, where, onSnapshot, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc, limit } from 'firebase/firestore';
-import { UserPlus, Check, X, Shield, Users as UsersIcon, Copy, Search, ExternalLink } from 'lucide-react';
+import { UserPlus, Check, X, Shield, Users as UsersIcon, Copy, Search, ExternalLink, Edit2 } from 'lucide-react';
 import FriendCharacters from './FriendCharacters';
 
 interface FriendInfo {
@@ -17,6 +17,7 @@ interface Friendship {
   status: 'pending' | 'accepted';
   requesterId: string;
   receiverId: string;
+  nicknames?: Record<string, string>;
 }
 
 interface FriendWithProfile extends Friendship {
@@ -36,6 +37,8 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
   const [searchError, setSearchError] = useState('');
   const [userProfile, setUserProfile] = useState<any>(null);
   const [activeFriendId, setActiveFriendId] = useState<string | null>(null);
+  const [editingNicknameId, setEditingNicknameId] = useState<string | null>(null);
+  const [nicknameInput, setNicknameInput] = useState('');
 
   const [friendshipDeleteConfirmId, setFriendshipDeleteConfirmId] = useState<string | null>(null);
 
@@ -133,6 +136,18 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
     });
   };
 
+  const updateNickname = async (friendshipId: string) => {
+    if (!auth.currentUser) return;
+    try {
+      await updateDoc(doc(db, 'friendships', friendshipId), {
+        [`nicknames.${auth.currentUser.uid}`]: nicknameInput
+      });
+      setEditingNicknameId(null);
+    } catch (err) {
+      console.error('Error updating nickname:', err);
+    }
+  };
+
   const removeFriend = async (friendshipId: string) => {
     if (friendshipDeleteConfirmId !== friendshipId) {
       setFriendshipDeleteConfirmId(friendshipId);
@@ -171,14 +186,14 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
             </h2>
             <form onSubmit={handleAddFriend} className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input 
                   type="text" 
                   value={friendCodeInput}
                   onChange={(e) => setFriendCodeInput(e.target.value)}
                   placeholder="ENTER FRIEND CODE..."
-                  className="fancy-input w-full pl-10 h-11 text-[10px] sm:text-sm tracking-widest uppercase"
+                  className="fancy-input w-full pr-12 h-11 text-[10px] sm:text-sm tracking-widest uppercase"
                 />
+                <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
               </div>
               <button type="submit" className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all">
                 Send Request
@@ -265,39 +280,80 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest leading-relaxed">No alliances formed.<br/>Share your code to begin.</p>
               </div>
             ) : (
-              acceptedFriends.map(f => (
-                <div 
-                  key={f.id}
-                  onClick={() => setActiveFriendId(f.profile?.uid || null)}
-                  className={`glass-panel p-4 cursor-pointer transition-all border-l-4 ${
-                    activeFriendId === f.profile?.uid 
-                      ? 'bg-blue-900/20 border-l-blue-400 ring-1 ring-blue-500/30' 
-                      : 'border-l-transparent hover:bg-slate-800/40'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold text-white truncate">{f.profile?.email}</div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        <span className="text-[10px] text-slate-500 uppercase">Allied Archer</span>
+              acceptedFriends.map(f => {
+                const myNickname = f.nicknames?.[auth.currentUser?.uid || ''];
+                const isEditing = editingNicknameId === f.id;
+
+                return (
+                  <div 
+                    key={f.id}
+                    onClick={() => setActiveFriendId(f.profile?.uid || null)}
+                    className={`glass-panel p-4 cursor-pointer transition-all border-l-4 ${
+                      activeFriendId === f.profile?.uid 
+                        ? 'bg-blue-900/20 border-l-blue-400 ring-1 ring-blue-500/30' 
+                        : 'border-l-transparent hover:bg-slate-800/40'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        {isEditing ? (
+                          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                            <input 
+                              autoFocus
+                              className="bg-black/40 border border-blue-500/50 rounded px-2 py-1 text-xs text-white outline-none w-full"
+                              value={nicknameInput}
+                              onChange={e => setNicknameInput(e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && updateNickname(f.id)}
+                            />
+                            <button onClick={() => updateNickname(f.id)} className="text-emerald-400 hover:text-emerald-300">
+                              <Check className="w-3 h-3" />
+                            </button>
+                            <button onClick={() => setEditingNicknameId(null)} className="text-red-400 hover:text-red-300">
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 group/nick">
+                            <div className="text-sm font-bold text-white truncate">
+                              {myNickname || f.profile?.email}
+                            </div>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingNicknameId(f.id);
+                                setNicknameInput(myNickname || '');
+                              }}
+                              className="opacity-0 group-hover/nick:opacity-100 p-1 hover:bg-white/10 rounded transition-all text-slate-500 hover:text-blue-400"
+                              title="Set Nickname"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                          <span className="text-[10px] text-slate-500 uppercase">
+                            {myNickname ? f.profile?.email.split('@')[0] : 'Allied Archer'}
+                          </span>
+                        </div>
                       </div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); removeFriend(f.id); }} 
+                        className={`p-2 transition-all flex items-center gap-2 rounded-lg ${
+                          friendshipDeleteConfirmId === f.id 
+                            ? 'bg-red-500 text-white animate-pulse px-3' 
+                            : 'text-slate-500 hover:text-red-400'
+                        }`}
+                        title={friendshipDeleteConfirmId === f.id ? "Confirm Termination" : "Terminate Alliance"}
+                      >
+                        <X className="w-5 h-5" />
+                        {friendshipDeleteConfirmId === f.id && <span className="text-[10px] font-black uppercase">Confirm?</span>}
+                      </button>
                     </div>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); removeFriend(f.id); }} 
-                      className={`p-2 transition-all flex items-center gap-2 rounded-lg ${
-                        friendshipDeleteConfirmId === f.id 
-                          ? 'bg-red-500 text-white animate-pulse px-3' 
-                          : 'text-slate-500 hover:text-red-400'
-                      }`}
-                      title={friendshipDeleteConfirmId === f.id ? "Confirm Termination" : "Terminate Alliance"}
-                    >
-                      <X className="w-5 h-5" />
-                      {friendshipDeleteConfirmId === f.id && <span className="text-[10px] font-black uppercase">Confirm?</span>}
-                    </button>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

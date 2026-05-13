@@ -214,7 +214,7 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 mt-2 md:mt-1">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase tracking-widest text-slate-500">{character.hasStartedDoN === false ? 'Assumed Faction:' : 'Faction:'}</span>
+                <span className="text-[10px] uppercase tracking-widest text-slate-500">{character.hasStartedDoN === false ? 'Intended Faction:' : 'Faction:'}</span>
                 <span className="text-xs md:text-sm text-blue-300 font-bold tracking-wide uppercase">{character.faction}</span>
               </div>
               <div className="flex items-center gap-2">

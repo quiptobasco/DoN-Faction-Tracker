@@ -21,6 +21,7 @@
         "status": { "type": "string", "enum": ["pending", "accepted"] },
         "requesterId": { "type": "string" },
         "receiverId": { "type": "string" },
+        "nicknames": { "type": "object", "additionalProperties": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uids", "status", "requesterId", "receiverId"]
@@ -32,13 +33,15 @@
       "properties": {
         "userId": { "type": "string" },
         "name": { "type": "string" },
-        "faction": { "type": "string", "enum": ["Norrath's Keepers", "Dark Reign"] },
+        "faction": { "type": "string", "enum": ["Norrath's Keeper", "Norrath's Keepers", "Dark Reign"] },
         "reputation": { "type": "string" },
+        "reputationValue": { "type": "integer" },
+        "hasStartedDoN": { "type": "boolean" },
         "completedTasks": { "type": "array", "items": { "type": "string" } },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["userId", "name", "faction", "reputation", "completedTasks"]
+      "required": ["userId", "name", "faction", "reputation", "reputationValue", "completedTasks"]
     }
   },
   "firestore": {

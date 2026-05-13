@@ -135,7 +135,7 @@ export default function CharacterCreate({ onCancel, onSuccess }: Props) {
 
         <div className="space-y-3">
           <label className="text-[10px] uppercase tracking-widest text-slate-500 font-bold ml-1">
-            {hasStartedDoN ? 'Faction Allegiance' : 'Assumed Faction Allegiance'}
+            {hasStartedDoN ? 'Faction Allegiance' : 'Intended Faction Allegiance'}
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {FACTIONS.map((f) => (

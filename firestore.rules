@@ -83,8 +83,13 @@ service cloud.firestore {
                       (
                         // Receiver accepts
                         (request.auth.uid == resource.data.receiverId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && request.resource.data.status == 'accepted') ||
-                        // Either party deletes/cancels (implemented via delete usually, but we can allow status update to 'rejected' if desired)
-                        false
+                        // Action: Update Nickname
+                        (
+                          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nicknames']) &&
+                          request.resource.data.nicknames.diff(resource.data.get('nicknames', {})).affectedKeys().hasOnly([request.auth.uid]) &&
+                          request.resource.data.nicknames[request.auth.uid] is string &&
+                          request.resource.data.nicknames[request.auth.uid].size() <= 32
+                        )
                       );
       allow delete: if isSignedIn() && request.auth.uid in resource.data.uids;
     }
