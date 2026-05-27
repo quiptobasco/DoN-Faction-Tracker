@@ -35,6 +35,7 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
   const [viewMode, setViewMode] = useState<'coordinated' | 'lookup'>('coordinated');
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [focusedObjectiveId, setFocusedObjectiveId] = useState<string | null>(null);
+  const [factionFilter, setFactionFilter] = useState<'all' | 'nk' | 'dr'>('all');
   const [sortMethod, setSortMethod] = useState<'name' | 'reputation'>(() => {
     const saved = localStorage.getItem('norrath_character_sort_by');
     return (saved === 'name' || saved === 'reputation') ? saved : 'reputation';
@@ -331,49 +332,110 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
               {/* Objective List */}
               <div className="glass-panel border-slate-800 bg-slate-900/10 overflow-hidden flex flex-col h-[400px] lg:h-[600px]">
-                <div className="p-4 border-b border-slate-800 bg-black/40">
-                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em]">Objective Register</span>
+                <div className="p-4 border-b border-slate-800 bg-black/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em] whitespace-nowrap">Objective Register</span>
+                  <div className="flex items-center bg-black/40 p-0.5 rounded-lg border border-slate-800/80 shrink-0 self-start sm:self-auto">
+                    <button
+                      onClick={() => {
+                        setFactionFilter('all');
+                        setFocusedObjectiveId(null);
+                      }}
+                      className={`px-2.5 py-1 text-[9px] uppercase font-bold tracking-wider rounded transition-all ${
+                        factionFilter === 'all'
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          : 'text-slate-400 hover:text-white border border-transparent'
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => {
+                        setFactionFilter('nk');
+                        setFocusedObjectiveId(null);
+                      }}
+                      className={`px-2.5 py-1 text-[9px] uppercase font-bold tracking-wider rounded transition-all ${
+                        factionFilter === 'nk'
+                          ? 'bg-blue-950/60 text-blue-400 border border-blue-500/30 font-bold'
+                          : 'text-slate-400 hover:text-blue-300 border border-transparent'
+                      }`}
+                    >
+                      NK
+                    </button>
+                    <button
+                      onClick={() => {
+                        setFactionFilter('dr');
+                        setFocusedObjectiveId(null);
+                      }}
+                      className={`px-2.5 py-1 text-[9px] uppercase font-bold tracking-wider rounded transition-all ${
+                        factionFilter === 'dr'
+                          ? 'bg-red-950/60 text-red-400 border border-red-500/30 font-bold'
+                          : 'text-slate-400 hover:text-red-300 border border-transparent'
+                      }`}
+                    >
+                      DR
+                    </button>
+                  </div>
                 </div>
                 <div className="overflow-y-auto divide-y divide-slate-800 flex-1 custom-scrollbar scroll-smooth">
-                  {[...NORRATHS_KEEPERS_TIERS, ...DARK_REIGN_TIERS].map(tier => {
-                    const tierTasks = tier.tasks.filter(t => 
+                  {(() => {
+                    let tiersToRender = [...NORRATHS_KEEPERS_TIERS, ...DARK_REIGN_TIERS];
+                    if (factionFilter === 'nk') {
+                      tiersToRender = NORRATHS_KEEPERS_TIERS;
+                    } else if (factionFilter === 'dr') {
+                      tiersToRender = DARK_REIGN_TIERS;
+                    }
+
+                    return tiersToRender.map(tier => {
+                      const tierTasks = tier.tasks.filter(t => 
+                        t.name.toLowerCase().includes(ledgerSearch.toLowerCase()) || 
+                        t.type.toLowerCase().includes(ledgerSearch.toLowerCase())
+                      );
+                      
+                      if (tierTasks.length === 0) return null;
+
+                      const isNK = tier.tasks[0]?.id.startsWith('nk');
+
+                      return (
+                        <div key={`${tier.id}-${isNK ? 'nk' : 'dr'}`} className="bg-black/20">
+                          <div className={`px-4 py-2 border-b border-slate-800 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md ${isNK ? 'bg-blue-900/40' : 'bg-red-900/40'}`}>
+                            <span className={`text-[9px] uppercase font-black tracking-widest ${isNK ? 'text-blue-400' : 'text-red-400'}`}>
+                              {isNK ? 'NK' : 'DR'} {tier.name}
+                            </span>
+                            <span className="text-[8px] text-slate-500 font-bold">{tierTasks.length} OBJECTIVES</span>
+                          </div>
+                          <div className="divide-y divide-slate-800/30">
+                            {tierTasks.map(task => (
+                              <button 
+                                key={task.id}
+                                onClick={() => setFocusedObjectiveId(task.id)}
+                                className={`w-full text-left p-4 transition-all hover:bg-slate-500/5 ${focusedObjectiveId === task.id ? (isNK ? 'bg-blue-500/10 border-r-4 border-blue-500' : 'bg-red-500/10 border-r-4 border-red-500') : ''}`}
+                              >
+                                <div className={`text-[9px] uppercase font-black tracking-tighter mb-0.5 ${isNK ? 'text-blue-500/60' : 'text-red-500/60'}`}>{task.type}</div>
+                                <div className={`text-sm font-bold ${focusedObjectiveId === task.id ? (isNK ? 'text-blue-300' : 'text-red-300') : 'text-slate-300'}`}>{task.name}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                  {(() => {
+                    let filteredAllTasks = allTasks;
+                    if (factionFilter === 'nk') {
+                      filteredAllTasks = allTasks.filter(t => t.id.startsWith('nk'));
+                    } else if (factionFilter === 'dr') {
+                      filteredAllTasks = allTasks.filter(t => t.id.startsWith('dr'));
+                    }
+                    
+                    const matchesCount = filteredAllTasks.filter(t => 
                       t.name.toLowerCase().includes(ledgerSearch.toLowerCase()) || 
                       t.type.toLowerCase().includes(ledgerSearch.toLowerCase())
-                    );
-                    
-                    if (tierTasks.length === 0) return null;
+                    ).length;
 
-                    const isNK = tier.tasks[0]?.id.startsWith('nk');
-
-                    return (
-                      <div key={`${tier.id}-${isNK ? 'nk' : 'dr'}`} className="bg-black/20">
-                        <div className={`px-4 py-2 border-b border-slate-800 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md ${isNK ? 'bg-blue-900/40' : 'bg-red-900/40'}`}>
-                          <span className={`text-[9px] uppercase font-black tracking-widest ${isNK ? 'text-blue-400' : 'text-red-400'}`}>
-                            {isNK ? 'NK' : 'DR'} {tier.name}
-                          </span>
-                          <span className="text-[8px] text-slate-500 font-bold">{tierTasks.length} OBJECTIVES</span>
-                        </div>
-                        <div className="divide-y divide-slate-800/30">
-                          {tierTasks.map(task => (
-                            <button 
-                              key={task.id}
-                              onClick={() => setFocusedObjectiveId(task.id)}
-                              className={`w-full text-left p-4 transition-all hover:bg-slate-500/5 ${focusedObjectiveId === task.id ? (isNK ? 'bg-blue-500/10 border-r-4 border-blue-500' : 'bg-red-500/10 border-r-4 border-red-500') : ''}`}
-                            >
-                              <div className={`text-[9px] uppercase font-black tracking-tighter mb-0.5 ${isNK ? 'text-blue-500/60' : 'text-red-500/60'}`}>{task.type}</div>
-                              <div className={`text-sm font-bold ${focusedObjectiveId === task.id ? (isNK ? 'text-blue-300' : 'text-red-300') : 'text-slate-300'}`}>{task.name}</div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {allTasks.filter(t => 
-                    t.name.toLowerCase().includes(ledgerSearch.toLowerCase()) || 
-                    t.type.toLowerCase().includes(ledgerSearch.toLowerCase())
-                  ).length === 0 && (
-                    <div className="p-8 text-center text-slate-600 italic text-sm font-serif">No objectives match your search.</div>
-                  )}
+                    return matchesCount === 0 ? (
+                      <div className="p-8 text-center text-slate-600 italic text-sm font-serif">No objectives match your search.</div>
+                    ) : null;
+                  })()}
                 </div>
               </div>
 
