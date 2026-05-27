@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { db } from '../lib/firebase';
-import { doc, getDoc, updateDoc, onSnapshot, serverTimestamp, deleteDoc } from 'firebase/firestore';
-import { ArrowLeft, CheckCircle2, Circle, Shield, Trophy, Trash2, Edit2, X, Save } from 'lucide-react';
+import { doc, updateDoc, onSnapshot, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { ArrowLeft, CheckCircle2, Circle, Shield, Trash2, Edit2, X, Save } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { getTiersByFaction, Tier, Task, Faction, MIN_REPUTATION, MAX_REPUTATION } from '../lib/constants';
 import { getReputationLabel, getReputationClasses } from '../lib/repUtils';
@@ -40,6 +40,10 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
   
   const initialLoadRef = useRef(true);
 
+  const isOwner = character?.userId === auth.currentUser?.uid;
+  const currentFactionTiers = character ? getTiersByFaction(character.faction as Faction) : [];
+  const totalTasks = currentFactionTiers.flatMap(t => t.tasks).length;
+
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'characters', characterId), (snapshot) => {
       if (snapshot.exists()) {
@@ -64,6 +68,7 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
   }, [characterId]);
 
   const toggleTask = (taskId: string) => {
+    if (!isOwner) return;
     if (character && character.hasStartedDoN === false) return;
     setEditedTaskIds(prev => 
       prev.includes(taskId)
@@ -73,6 +78,7 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
   };
 
   const toggleTierGroup = (tierTasks: Task[], select: boolean) => {
+    if (!isOwner) return;
     if (character && character.hasStartedDoN === false) return;
     const tierIds = tierTasks.map(t => t.id);
     if (select) {
@@ -137,16 +143,11 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
 
   if (!character) return null;
 
-  const isOwner = character.userId === auth.currentUser?.uid;
-  const currentFactionTiers = getTiersByFaction(character.faction as Faction);
-  
   const hasChanges = 
     JSON.stringify([...editedTaskIds].sort()) !== JSON.stringify([...character.completedTasks].sort()) ||
     editedName !== character.name ||
     editedHasStartedDoN !== (character.hasStartedDoN ?? true) ||
     Number(editedReputationValue) !== (character.reputationValue ?? 0);
-
-  const totalTasks = currentFactionTiers.flatMap(t => t.tasks).length;
 
   const discardChanges = () => {
     setEditedTaskIds(character.completedTasks);
@@ -164,53 +165,60 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-3">
-              {isEditingProfile ? (
-                <input 
-                  type="text"
-                  value={editedName}
-                  onChange={(e) => setEditedName(e.target.value)}
-                  className="text-2xl md:text-4xl font-serif font-bold bg-white/5 border-b-2 border-blue-500 text-white outline-none px-2 focus:bg-white/10 transition-colors w-full md:max-w-md"
-                  id="edit_name_input_id"
-                />
-              ) : (
-                <h2 className="text-2xl md:text-4xl font-serif font-bold faction-gold tracking-tight truncate" id="character_name_id">{character.name}</h2>
-              )}
-              {isOwner && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      if (isEditingProfile) {
-                        discardChanges();
-                      } else {
-                        setIsEditingProfile(true);
-                      }
-                    }}
-                    className={`p-2 rounded-lg transition-all ${
-                      isEditingProfile ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-blue-400'
-                    }`}
-                    title={isEditingProfile ? "Cancel Editing" : "Edit Profile"}
-                    id="toggle_edit_profile_button_id"
-                  >
-                    {isEditingProfile ? <X className="w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
-                  </button>
-                  {!isEditingProfile && (
-                    <button 
-                      onClick={handleDelete}
-                      className={`p-2 transition-all flex items-center gap-2 rounded-lg ${
-                        deleteConfirm 
-                          ? 'bg-red-500 text-white animate-pulse px-3' 
-                          : 'text-slate-600 hover:text-red-500'
+            <div className="flex flex-wrap items-center gap-4">
+              <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center font-black text-xs shrink-0 ${
+                character.faction === "Dark Reign" ? 'bg-red-900/20 border-red-500/30 text-red-400' : 'bg-blue-900/20 border-blue-500/30 text-blue-400'
+              }`}>
+                {character.faction === "Dark Reign" ? 'DR' : 'NK'}
+              </div>
+              <div className="flex flex-wrap items-center gap-3 min-w-0 flex-1">
+                {isEditingProfile ? (
+                  <input 
+                    type="text"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    className="text-2xl md:text-4xl font-serif font-bold bg-white/5 border-b-2 border-blue-500 text-white outline-none px-2 focus:bg-white/10 transition-colors w-full md:max-w-md"
+                    id="edit_name_input_id"
+                  />
+                ) : (
+                  <h2 className="text-2xl md:text-4xl font-serif font-bold faction-gold tracking-tight truncate" id="character_name_id">{character.name}</h2>
+                )}
+                {isOwner && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        if (isEditingProfile) {
+                          discardChanges();
+                        } else {
+                          setIsEditingProfile(true);
+                        }
+                      }}
+                      className={`p-2 rounded-lg transition-all ${
+                        isEditingProfile ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-blue-400'
                       }`}
-                      title={deleteConfirm ? "Confirm Permanent Deletion" : "Delete Character"}
-                      id="delete_character_button_id"
+                      title={isEditingProfile ? "Cancel Editing" : "Edit Profile"}
+                      id="toggle_edit_profile_button_id"
                     >
-                      <Trash2 className="w-5 h-5" />
-                      {deleteConfirm && <span className="text-[10px] font-black uppercase tracking-widest">Confirm?</span>}
+                      {isEditingProfile ? <X className="w-5 h-5" /> : <Edit2 className="w-5 h-5" />}
                     </button>
-                  )}
-                </div>
-              )}
+                    {!isEditingProfile && (
+                      <button 
+                        onClick={handleDelete}
+                        className={`p-2 transition-all flex items-center gap-2 rounded-lg ${
+                          deleteConfirm 
+                            ? 'bg-red-500 text-white animate-pulse px-3' 
+                            : 'text-slate-600 hover:text-red-500'
+                        }`}
+                        title={deleteConfirm ? "Confirm Permanent Deletion" : "Delete Character"}
+                        id="delete_character_button_id"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                        {deleteConfirm && <span className="text-[10px] font-black uppercase tracking-widest">Confirm?</span>}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 mt-2 md:mt-1">
               <div className="flex items-center gap-2">
@@ -368,7 +376,7 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
                   return (
                     <label 
                       key={task.id}
-                      className={`flex items-center gap-3 group ${isLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                      className={`flex items-center gap-3 group ${(!isOwner || isLocked) ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                       <input 
                         type="checkbox"
@@ -392,7 +400,6 @@ export default function CharacterDetails({ characterId, onBack }: Props) {
           );
         })}
       </div>
-
     </div>
   );
 }

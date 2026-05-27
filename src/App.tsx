@@ -21,6 +21,7 @@ export default function App() {
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
   const [summaryIds, setSummaryIds] = useState<string[]>([]);
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
+  const [backView, setBackView] = useState<'list' | 'social'>('list');
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -203,6 +204,7 @@ export default function App() {
                   onAddCharacter={() => setView('create')} 
                   onSelectCharacter={(id) => {
                     setSelectedCharacterId(id);
+                    setBackView('list');
                     setView('details');
                   }}
                 />
@@ -236,6 +238,11 @@ export default function App() {
                   onViewFriendCharacters={(id) => {
                     setSelectedFriendId(id);
                   }}
+                  onSelectCharacter={(id) => {
+                    setSelectedCharacterId(id);
+                    setBackView('social');
+                    setView('details');
+                  }}
                 />
               </motion.div>
             )}
@@ -249,7 +256,7 @@ export default function App() {
               >
                 <CharacterDetails 
                   characterId={selectedCharacterId}
-                  onBack={() => setView('list')}
+                  onBack={() => setView(backView)}
                 />
               </motion.div>
             )}

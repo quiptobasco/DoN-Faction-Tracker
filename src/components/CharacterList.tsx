@@ -26,9 +26,16 @@ export default function CharacterList({ onAddCharacter, onSelectCharacter }: Pro
   const [loading, setLoading] = useState(true);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  // Filter and Sort states
+// Filter and Sort states
   const [factionFilter, setFactionFilter] = useState<FactionFilter>('All');
-  const [sortBy, setSortBy] = useState<SortOption>('name');
+  const [sortBy, setSortBy] = useState<SortOption>(() => {
+    const saved = localStorage.getItem('norrath_character_sort_by');
+    return (saved === 'name' || saved === 'reputation') ? saved : 'name';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('norrath_character_sort_by', sortBy);
+  }, [sortBy]);
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -177,15 +184,23 @@ export default function CharacterList({ onAddCharacter, onSelectCharacter }: Pro
                   <Shield className={`w-12 h-12 ${isDR ? 'text-red-400' : 'text-blue-400'}`} />
                 </div>
                 
-                <div className="relative z-10">
-                  <h3 className={`text-xl font-bold text-white transition-colors ${
-                    isDR ? 'group-hover:text-red-300' : 'group-hover:text-blue-300'
-                  }`}>{char.name}</h3>
-                  <div className={`flex items-center gap-2 text-[10px] uppercase tracking-widest mt-1 ${
-                    isDR ? 'text-red-400' : 'text-blue-400'
+                <div className="relative z-10 flex items-start gap-4">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 font-black text-xs ${
+                    isDR ? 'bg-red-900/20 border-red-500/30 text-red-400' : 'bg-blue-900/20 border-blue-500/30 text-blue-400'
                   }`}>
-                    {char.faction}
+                    {isDR ? 'DR' : 'NK'}
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`text-xl font-bold text-white transition-colors truncate ${
+                      isDR ? 'group-hover:text-red-300' : 'group-hover:text-blue-300'
+                    }`}>{char.name}</h3>
+                    <div className={`flex items-center gap-2 text-[10px] uppercase tracking-widest mt-1 ${
+                      isDR ? 'text-red-400' : 'text-blue-400'
+                    }`}>
+                      {char.faction}
+                    </div>
+                  </div>
+                </div>
                   <div className="mt-4 pt-4 border-t border-slate-700/50 flex justify-between items-center">
                     <div className="text-[10px] uppercase tracking-tighter text-slate-500">Reputation</div>
                     <div className="flex items-center gap-3">
@@ -210,9 +225,8 @@ export default function CharacterList({ onAddCharacter, onSelectCharacter }: Pro
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
       )}
     </div>

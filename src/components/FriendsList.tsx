@@ -28,9 +28,10 @@ interface Props {
   selectedIds: string[];
   onSelectionChange: (ids: string[]) => void;
   onViewFriendCharacters: (id: string) => void;
+  onSelectCharacter?: (id: string) => void;
 }
 
-export default function FriendsList({ selectedIds, onSelectionChange, onViewFriendCharacters }: Props) {
+export default function FriendsList({ selectedIds, onSelectionChange, onViewFriendCharacters, onSelectCharacter }: Props) {
   const [friendships, setFriendships] = useState<FriendWithProfile[]>([]);
   const [friendCodeInput, setFriendCodeInput] = useState('');
   const [loading, setLoading] = useState(true);
@@ -313,7 +314,7 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2 group/nick">
+                          <div className="flex items-center gap-1.5 min-w-0">
                             <div className="text-sm font-bold text-white truncate">
                               {myNickname || f.profile?.email}
                             </div>
@@ -323,10 +324,11 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
                                 setEditingNicknameId(f.id);
                                 setNicknameInput(myNickname || '');
                               }}
-                              className="opacity-0 group-hover/nick:opacity-100 p-1 hover:bg-white/10 rounded transition-all text-slate-500 hover:text-blue-400"
+                              className="p-1 hover:bg-white/10 rounded transition-colors text-slate-500 hover:text-blue-400 shrink-0"
                               title="Set Nickname"
+                              id={`edit_nickname_btn_${f.id}`}
                             >
-                              <Edit2 className="w-3 h-3" />
+                              <Edit2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         )}
@@ -360,27 +362,35 @@ export default function FriendsList({ selectedIds, onSelectionChange, onViewFrie
       </div>
 
       {/* Friend Detail Overlay/Sub-view */}
-      {activeFriendId && (
-        <div className="mt-8 pt-8 border-t border-slate-800">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-2xl font-serif font-bold text-blue-400">Allied Chronicles</h3>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Viewing characters of your ally</p>
+      {activeFriendId && (() => {
+        const activeFriendship = friendships.find(f => f.profile?.uid === activeFriendId);
+        const myNickname = activeFriendship?.nicknames?.[auth.currentUser?.uid || ''];
+        const activeFriendName = myNickname || activeFriendship?.profile?.email || 'Your Ally';
+        return (
+          <div className="mt-8 pt-8 border-t border-slate-800">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-2xl font-serif font-bold text-blue-400">
+                  {myNickname ? `${myNickname}'s Allied Chronicles` : 'Allied Chronicles'}
+                </h3>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Viewing characters of {activeFriendName}</p>
+              </div>
+              <button onClick={() => setActiveFriendId(null)} className="text-xs text-slate-500 hover:text-white uppercase font-bold">
+                Close View
+              </button>
             </div>
-            <button onClick={() => setActiveFriendId(null)} className="text-xs text-slate-500 hover:text-white uppercase font-bold">
-              Close View
-            </button>
+            
+            <div className="bg-blue-900/5 p-6 rounded-2xl border border-blue-500/10">
+               <FriendCharacters 
+                 friendId={activeFriendId} 
+                 selectedIds={selectedIds}
+                 onSelectionChange={onSelectionChange}
+                 onSelectCharacter={onSelectCharacter}
+               />
+            </div>
           </div>
-          
-          <div className="bg-blue-900/5 p-6 rounded-2xl border border-blue-500/10">
-             <FriendCharacters 
-               friendId={activeFriendId} 
-               selectedIds={selectedIds}
-               onSelectionChange={onSelectionChange}
-             />
-          </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

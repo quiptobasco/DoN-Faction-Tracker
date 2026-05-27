@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { db, auth } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { collection, query, where, onSnapshot, getDocs, doc, getDoc } from 'firebase/firestore';
-import { ArrowLeft, Trash2, LayoutDashboard, UserCheck, ShieldCheck, Sparkles, Users, User, Shield, Search } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Trash2, LayoutDashboard, UserCheck, ShieldCheck, Sparkles, Users, User, Shield, Search, CheckCircle2, X } from 'lucide-react';
 import { handleFirestoreError } from '../lib/firestoreUtils';
 import { NORRATHS_KEEPERS_TIERS, DARK_REIGN_TIERS, Task, getTiersByFaction, Faction } from '../lib/constants';
 
@@ -12,11 +11,13 @@ interface Character {
   faction: string;
   userId: string;
   completedTasks: string[];
+  reputationValue?: number;
 }
 
 interface FriendProfile {
   uid: string;
   email: string;
+  nickname?: string;
 }
 
 interface Props {
@@ -34,8 +35,37 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
   const [viewMode, setViewMode] = useState<'coordinated' | 'lookup'>('coordinated');
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [focusedObjectiveId, setFocusedObjectiveId] = useState<string | null>(null);
+  const [sortMethod, setSortMethod] = useState<'name' | 'reputation'>(() => {
+    const saved = localStorage.getItem('norrath_character_sort_by');
+    return (saved === 'name' || saved === 'reputation') ? saved : 'reputation';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('norrath_character_sort_by', sortMethod);
+  }, [sortMethod]);
 
   const allTasks: Task[] = [...NORRATHS_KEEPERS_TIERS.flatMap(t => t.tasks), ...DARK_REIGN_TIERS.flatMap(t => t.tasks)];
+
+  const getReadiness = (char: Character, taskId: string) => {
+    const factionTiers = getTiersByFaction(char.faction as Faction);
+    const tierIndex = factionTiers.findIndex(t => t.tasks.some(tk => tk.id === taskId));
+    if (tierIndex === -1) return { ready: false, repOk: false, prevOk: false, reqRep: 0 };
+
+    const tier = factionTiers[tierIndex];
+    const repReqs = [0, 100, 300, 500, 750];
+    const reqRep = repReqs[tier.id - 1] || 0;
+    const repOk = (char.reputationValue ?? 0) >= reqRep;
+
+    let prevOk = true;
+    for (let i = 0; i < tierIndex; i++) {
+      if (!factionTiers[i].tasks.every(tk => char.completedTasks.includes(tk.id))) {
+        prevOk = false;
+        break;
+      }
+    }
+
+    return { ready: repOk && prevOk, repOk, prevOk, reqRep };
+  };
 
   useEffect(() => {
     if (!currentUserUid) return;
@@ -59,22 +89,30 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
     }, (error) => handleFirestoreError(error, 'listen', 'characters (own)'));
 
     const unsubFriends = onSnapshot(qFriends, async (snap) => {
-      const friendIds = snap.docs.map(d => {
+      const friendshipsList = snap.docs.map(d => {
         const data = d.data();
-        return data.uids.find((id: string) => id !== currentUserUid);
-      });
+        const fId = data.uids.find((id: string) => id !== currentUserUid);
+        const nickname = data.nicknames?.[currentUserUid] || '';
+        return { friendId: fId, nickname };
+      }).filter(item => item.friendId !== undefined) as { friendId: string; nickname: string }[];
 
-      if (friendIds.length === 0) {
+      if (friendshipsList.length === 0) {
         setFriends([]);
         setAllCharacters(prev => prev.filter(c => c.userId === currentUserUid));
         return;
       }
 
+      const friendIds = friendshipsList.map(item => item.friendId);
+
       try {
         // Fetch friend profiles
-        const profiles = await Promise.all(friendIds.map(async id => {
-          const d = await getDoc(doc(db, 'users', id));
-          return { uid: id, email: d.data()?.email || 'Unknown Ally' };
+        const profiles = await Promise.all(friendshipsList.map(async ({ friendId, nickname }) => {
+          const d = await getDoc(doc(db, 'users', friendId));
+          return { 
+            uid: friendId, 
+            email: d.data()?.email || 'Unknown Ally',
+            nickname: nickname
+          };
         }));
         setFriends(profiles);
 
@@ -148,6 +186,13 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
             >
               Objective Reverse Lookup
             </button>
+            <div className="h-4 w-[1px] bg-slate-800 mx-2 hidden md:block"></div>
+            <button 
+              onClick={() => setSortMethod(prev => prev === 'name' ? 'reputation' : 'name')}
+              className="text-[10px] md:text-xs uppercase font-black tracking-[0.2em] text-slate-500 hover:text-gold transition-all"
+            >
+              Sorting: {sortMethod === 'reputation' ? 'Reputation' : 'Name'}
+            </button>
           </div>
         </div>
         
@@ -196,7 +241,13 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
               })()}
             </div>
             <div className="space-y-2">
-              {allCharacters.filter(c => c.userId === currentUserUid).map(char => (
+              {allCharacters
+                .filter(c => c.userId === currentUserUid)
+                .sort((a, b) => {
+                  if (sortMethod === 'name') return a.name.localeCompare(b.name);
+                  return (b.reputationValue ?? 0) - (a.reputationValue ?? 0);
+                })
+                .map(char => (
                 <CharacterMiniCard 
                   key={char.id} 
                   char={char} 
@@ -212,23 +263,29 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
             <div key={friend.uid} className="space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-[10px] text-purple-400 uppercase font-bold tracking-widest flex items-center gap-2">
-                  <Shield className="w-3 h-3" /> {friend.email.split('@')[0]}'s Allied Heroes
+                  <Shield className="w-3 h-3" /> {friend.nickname || friend.email.split('@')[0]}'s Allied Heroes
                 </h4>
                 {(() => {
-                  const friendIds = allCharacters.filter(c => c.userId === friend.uid).map(c => c.id);
-                  const allSelected = friendIds.length > 0 && friendIds.every(id => characterIds.includes(id));
-                  return friendIds.length > 0 ? (
-                    <button 
-                      onClick={() => toggleBulkSelect(friendIds, !allSelected)}
-                      className="text-[9px] uppercase font-bold text-slate-500 hover:text-purple-400 transition-colors"
-                    >
-                      {allSelected ? 'Deselect All' : 'Select All'}
-                    </button>
-                  ) : null;
+                   const friendIds = allCharacters.filter(c => c.userId === friend.uid).map(c => c.id);
+                   const allSelected = friendIds.length > 0 && friendIds.every(id => characterIds.includes(id));
+                   return friendIds.length > 0 ? (
+                     <button 
+                       onClick={() => toggleBulkSelect(friendIds, !allSelected)}
+                       className="text-[9px] uppercase font-bold text-slate-500 hover:text-purple-400 transition-colors"
+                     >
+                       {allSelected ? 'Deselect All' : 'Select All'}
+                     </button>
+                   ) : null;
                 })()}
               </div>
               <div className="space-y-2">
-                {allCharacters.filter(c => c.userId === friend.uid).map(char => (
+                {allCharacters
+                  .filter(c => c.userId === friend.uid)
+                  .sort((a, b) => {
+                    if (sortMethod === 'name') return a.name.localeCompare(b.name);
+                    return (b.reputationValue ?? 0) - (a.reputationValue ?? 0);
+                  })
+                  .map(char => (
                   <CharacterMiniCard 
                     key={char.id} 
                     char={char} 
@@ -329,12 +386,9 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
                       const isNKTask = task.id.startsWith('nk');
                       const relevantFaction = isNKTask ? "Norrath's Keepers" : "Dark Reign";
 
-                      const charsWhoNeed = allCharacters.filter(c => 
-                        c.faction === relevantFaction && !c.completedTasks.includes(task.id)
-                      );
-                      const charsWhoHave = allCharacters.filter(c => 
-                        c.faction === relevantFaction && c.completedTasks.includes(task.id)
-                      );
+                      const charsWhoNeed = allCharacters
+                        .filter(c => c.faction === relevantFaction && !c.completedTasks.includes(task.id))
+                        .sort((a, b) => (b.reputationValue ?? 0) - (a.reputationValue ?? 0));
 
                       return (
                         <>
@@ -347,56 +401,53 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
                               <h4 className="text-2xl md:text-4xl font-serif font-bold text-white mb-2">{task.name}</h4>
                               <p className="text-xs md:text-sm text-slate-400 leading-relaxed max-w-2xl mb-8">Intelligence report for all tracked adventurers (including allies) regarding this specific chronicle objective.</p>
                               
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-4">
-                                  <div className="flex items-center justify-between border-b border-red-500/20 pb-2">
-                                    <span className="text-xs font-black text-red-400 uppercase tracking-widest">Unfinished Chronicles ({charsWhoNeed.length})</span>
-                                  </div>
-                                  <div className="space-y-3">
-                                    {charsWhoNeed.map(char => {
-                                      const isFriend = currentUserUid && char.userId !== currentUserUid;
-                                      return (
-                                        <div key={char.id} className={`p-3 rounded-xl border flex items-center justify-between transition-all hover:translate-x-1 ${isFriend ? 'bg-purple-900/5 border-purple-500/20' : 'bg-slate-900 border-slate-800'}`}>
-                                          <div className="flex items-center gap-3">
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black border ${isFriend ? 'bg-purple-500/20 border-purple-500/40 text-purple-300' : 'bg-blue-500/20 border-blue-500/40 text-blue-300'}`}>
-                                              {char.name.charAt(0)}
-                                            </div>
-                                            <div>
-                                              <div className="text-sm font-bold text-white">{char.name}</div>
-                                              <div className={`text-[9px] uppercase font-black tracking-widest ${isFriend ? 'text-purple-400' : 'text-slate-500'}`}>
-                                                {isFriend ? 'Ally' : 'Account Hero'}
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between border-b border-red-500/20 pb-2">
+                                  <span className="text-xs font-black text-red-400 uppercase tracking-widest">Unfinished Chronicles ({charsWhoNeed.length})</span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {charsWhoNeed.map(char => {
+                                    const isFriend = currentUserUid && char.userId !== currentUserUid;
+                                    const { ready, repOk, prevOk, reqRep } = getReadiness(char, task.id);
+                                    
+                                    return (
+                                        <div key={char.id} className={`p-3 rounded-xl border flex flex-col gap-3 transition-all hover:translate-x-1 ${isFriend ? 'bg-purple-900/5 border-purple-500/20' : 'bg-slate-900 border-slate-800'}`}>
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                              <div>
+                                                <div className="text-sm font-bold text-white">{char.name}</div>
+                                                <div className={`text-[9px] uppercase font-black tracking-widest ${isFriend ? 'text-purple-400' : 'text-slate-500'}`}>
+                                                  {isFriend ? 'Ally' : 'Account Hero'} • Rep: {char.reputationValue ?? 0}
+                                                </div>
                                               </div>
                                             </div>
+                                            <div className={`flex items-center gap-2 px-2 py-1 border text-[9px] font-black uppercase rounded ${
+                                              ready 
+                                                ? 'bg-emerald-900/40 border-emerald-500/40 text-emerald-400' 
+                                                : 'bg-amber-900/20 border-amber-500/20 text-amber-500'
+                                            }`}>
+                                              {ready ? 'Ready to Deploy' : 'Awaiting Prep'}
+                                            </div>
                                           </div>
-                                          <div className="flex items-center gap-2 px-2 py-1 bg-red-900/20 border border-red-500/20 text-red-500 text-[9px] font-black uppercase rounded">Needs</div>
-                                        </div>
-                                      );
-                                    })}
-                                    {charsWhoNeed.length === 0 && <p className="text-xs text-slate-600 italic p-4">No adventurers currently require this objective.</p>}
-                                  </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                  <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
-                                    <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">Cleared ({charsWhoHave.length})</span>
-                                  </div>
-                                  <div className="space-y-3 opacity-60">
-                                    {charsWhoHave.map(char => {
-                                      const isFriend = currentUserUid && char.userId !== currentUserUid;
-                                      return (
-                                        <div key={char.id} className={`p-3 rounded-xl border flex items-center justify-between ${isFriend ? 'bg-purple-900/5 border-purple-500/20' : 'bg-slate-900 border-slate-800'}`}>
-                                          <div className="flex items-center gap-3 font-serif">
-                                            <div className="text-xs text-slate-300 italic">{char.name}</div>
+                                        
+                                        {!ready && (
+                                          <div className="flex flex-wrap gap-2 px-2 pb-1">
+                                            {!repOk && (
+                                              <div className="text-[8px] font-black uppercase tracking-widest text-red-400 flex items-center gap-1">
+                                                <Shield className="w-2.5 h-2.5" /> Need {reqRep - (char.reputationValue ?? 0)} more Rep
+                                              </div>
+                                            )}
+                                            {!prevOk && (
+                                              <div className="text-[8px] font-black uppercase tracking-widest text-red-500 flex items-center gap-1">
+                                                <X className="w-2.5 h-2.5" /> Previous Tiers Incomplete
+                                              </div>
+                                            )}
                                           </div>
-                                          <div className="flex items-center gap-1.5 text-[9px] font-black uppercase text-emerald-500">
-                                            <div className="p-0.5 bg-emerald-500/20 rounded-full border border-emerald-500/30"><Check className="w-2.5 h-2.5" /></div>
-                                            Cleared
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                    {charsWhoHave.length === 0 && <p className="text-xs text-slate-600 italic p-4">No adventurers have recorded this objective.</p>}
-                                  </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                  {charsWhoNeed.length === 0 && <div className="col-span-full text-xs text-slate-600 italic p-4 text-center">No adventurers currently require this objective.</div>}
                                 </div>
                               </div>
                             </div>
@@ -457,43 +508,29 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
                                   <span className={`text-[10px] uppercase font-black tracking-tighter ${isNK ? 'text-blue-400/80' : 'text-red-400/80'}`}>{task.type}</span>
                                   <div className={`text-lg font-bold text-white leading-tight transition-colors ${isNK ? 'group-hover:text-blue-300' : 'group-hover:text-red-300'}`}>{task.name}</div>
                                 </div>
-                                <div className="flex -space-x-2">
-                                  {charsWhoNeedThis.map(char => {
-                                    const isFriend = currentUserUid && char.userId !== currentUserUid;
-                                    return (
-                                      <div 
-                                        key={char.id}
-                                        title={char.name}
-                                        className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-black uppercase ring-4 ring-black ${
-                                          isFriend 
-                                            ? 'bg-purple-900 border-purple-500 text-purple-300' 
-                                            : isNK ? 'bg-slate-800 border-slate-700 text-blue-400' : 'bg-slate-800 border-slate-700 text-red-400'
-                                        }`}
-                                      >
-                                        {char.name.charAt(0)}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
                               </div>
                               
                               <div className="flex flex-wrap gap-2">
-                                {charsWhoNeedThis.map(char => {
-                                  const isFriend = currentUserUid && char.userId !== currentUserUid;
-                                  return (
-                                    <span 
-                                      key={char.id} 
-                                      className={`px-3 py-1 border-b-2 rounded text-[10px] font-black uppercase tracking-tighter ${
+                                  {charsWhoNeedThis.map(char => {
+                                    const isFriend = currentUserUid && char.userId !== currentUserUid;
+                                    const { ready, repOk, prevOk, reqRep } = getReadiness(char, task.id);
+                                    return (
+                                      <span 
+                                        key={char.id} 
+                                        title={ready ? 'READY' : `PREP: ${!repOk ? `[Need ${reqRep - (char.reputationValue ?? 0)} Rep] ` : ''}${!prevOk ? '[Tiers Incomplete]' : ''}`}
+                                        className={`px-3 py-1 border-b-2 rounded text-[10px] font-black uppercase tracking-tighter flex items-center gap-2 ${
                                         isFriend 
                                           ? 'bg-purple-900/10 border-purple-500/30 text-purple-400 shadow-[0_2px_10px_rgba(168,85,247,0.1)]' 
                                           : isNK ? 'bg-blue-900/10 border-blue-500/30 text-blue-400' : 'bg-red-900/10 border-red-500/30 text-red-400'
-                                      }`}
+                                      } ${!ready ? 'opacity-40 grayscale' : ''}`}
                                     >
                                       {char.name}
+                                      {ready ? <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" /> : <X className="w-2.5 h-2.5 text-slate-500" />}
                                     </span>
                                   );
                                 })}
                               </div>
+
                             </div>
                           );
                         })}
@@ -505,7 +542,7 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
             </div>
 
             {/* Sidebar: Readiness Status */}
-            <div className="space-y-6">
+            <div className="space-y-6 lg:sticky lg:top-24">
               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-[0.2em] border-b border-slate-800 pb-2 flex items-center gap-2">
                 <UserCheck className="w-4 h-4 text-emerald-400" /> Active Party Status
               </h3>
@@ -580,9 +617,9 @@ function CharacterMiniCard({ char, isSelected, onToggle, isFriend }: { char: Cha
         <div className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
            isSelected 
              ? isFriend ? 'bg-purple-500 border-purple-400 text-white' : 'bg-emerald-500 border-emerald-400 text-white'
-             : 'bg-slate-900 border-slate-700 text-slate-600'
+             : isFriend ? 'bg-purple-950/40 border-purple-500/40 text-purple-400' : char.faction === 'Dark Reign' ? 'bg-red-900/40 border-red-500/40 text-red-400' : 'bg-blue-900/40 border-blue-500/40 text-blue-400'
         }`}>
-          {isSelected ? <Check className="w-4 h-4" /> : <div className="w-2 h-2 rounded-full border border-slate-600" />}
+          {isSelected ? <Check className="w-4 h-4" /> : <span className="font-black text-[10px]">{char.faction === "Dark Reign" ? "DR" : "NK"}</span>}
         </div>
         <div>
           <div className={`text-xs font-bold transition-colors ${isSelected ? 'text-white' : 'group-hover:text-slate-300'}`}>{char.name}</div>
