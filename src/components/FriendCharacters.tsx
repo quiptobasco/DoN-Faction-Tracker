@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { db } from '../lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { Shield, Sparkles, ExternalLink } from 'lucide-react';
@@ -41,6 +41,23 @@ export default function FriendCharacters({ friendId, selectedIds = [], onSelecti
     return unsubscribe;
   }, [friendId]);
 
+  const sortedCharacters = useMemo(() => {
+    const sortOption = localStorage.getItem('norrath_character_sort_by') || 'name';
+    const result = [...characters];
+    result.sort((a, b) => {
+      if (sortOption === 'name') {
+        return a.name.localeCompare(b.name);
+      } else if (sortOption === 'reputation') {
+        const repA = a.reputationValue ?? 0;
+        const repB = b.reputationValue ?? 0;
+        if (repB !== repA) return repB - repA;
+        return a.name.localeCompare(b.name); // Tie-break with name
+      }
+      return 0;
+    });
+    return result;
+  }, [characters]);
+
   const toggleSelect = (id: string) => {
     if (!onSelectionChange) return;
     const newSelection = selectedIds.includes(id)
@@ -53,13 +70,13 @@ export default function FriendCharacters({ friendId, selectedIds = [], onSelecti
 
   return (
     <div>
-      {characters.length === 0 ? (
+      {sortedCharacters.length === 0 ? (
         <div className="text-center py-12 opacity-50 italic font-serif">
           This adventurer has not yet chronicled their journey.
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {characters.map(char => {
+          {sortedCharacters.map(char => {
             const isSelected = selectedIds.includes(char.id);
             return (
               <div 
