@@ -214,73 +214,36 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
       </div>
 
       {/* Selection Hub */}
-      <div className="space-y-8">
-        <div className="flex items-center gap-4 border-b border-slate-800 pb-2">
-          <Users className="w-5 h-5 text-gold" />
-          <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest">Raiding Party Assembly</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Your Characters */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-[10px] text-blue-400 uppercase font-bold tracking-widest flex items-center gap-2">
-                <User className="w-3 h-3" /> Your Heroes
-              </h4>
-              {(() => {
-                const ownIds = allCharacters.filter(c => c.userId === currentUserUid).map(c => c.id);
-                const allSelected = ownIds.length > 0 && ownIds.every(id => characterIds.includes(id));
-                return ownIds.length > 0 ? (
-                  <button 
-                    onClick={() => toggleBulkSelect(ownIds, !allSelected)}
-                    className="text-[9px] uppercase font-bold text-slate-500 hover:text-blue-400 transition-colors"
-                  >
-                    {allSelected ? 'Deselect All' : 'Select All'}
-                  </button>
-                ) : null;
-              })()}
-            </div>
-            <div className="space-y-2">
-              {allCharacters
-                .filter(c => c.userId === currentUserUid)
-                .sort((a, b) => {
-                  if (sortMethod === 'name') return a.name.localeCompare(b.name);
-                  return (b.reputationValue ?? 0) - (a.reputationValue ?? 0);
-                })
-                .map(char => (
-                <CharacterMiniCard 
-                  key={char.id} 
-                  char={char} 
-                  isSelected={characterIds.includes(char.id)} 
-                  onToggle={() => toggleSelect(char.id)}
-                />
-              ))}
-            </div>
+      {viewMode === 'coordinated' && (
+        <div className="space-y-8">
+          <div className="flex items-center gap-4 border-b border-slate-800 pb-2">
+            <Users className="w-5 h-5 text-gold" />
+            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-widest">Raiding Party Assembly</h3>
           </div>
 
-          {/* Friends' Characters */}
-          {friends.map(friend => (
-            <div key={friend.uid} className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Your Characters */}
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-[10px] text-purple-400 uppercase font-bold tracking-widest flex items-center gap-2">
-                  <Shield className="w-3 h-3" /> {friend.nickname || friend.email.split('@')[0]}'s Allied Heroes
+                <h4 className="text-[10px] text-blue-400 uppercase font-bold tracking-widest flex items-center gap-2">
+                  <User className="w-3 h-3" /> Your Heroes
                 </h4>
                 {(() => {
-                   const friendIds = allCharacters.filter(c => c.userId === friend.uid).map(c => c.id);
-                   const allSelected = friendIds.length > 0 && friendIds.every(id => characterIds.includes(id));
-                   return friendIds.length > 0 ? (
-                     <button 
-                       onClick={() => toggleBulkSelect(friendIds, !allSelected)}
-                       className="text-[9px] uppercase font-bold text-slate-500 hover:text-purple-400 transition-colors"
-                     >
-                       {allSelected ? 'Deselect All' : 'Select All'}
-                     </button>
-                   ) : null;
+                  const ownIds = allCharacters.filter(c => c.userId === currentUserUid).map(c => c.id);
+                  const allSelected = ownIds.length > 0 && ownIds.every(id => characterIds.includes(id));
+                  return ownIds.length > 0 ? (
+                    <button 
+                      onClick={() => toggleBulkSelect(ownIds, !allSelected)}
+                      className="text-[9px] uppercase font-bold text-slate-500 hover:text-blue-400 transition-colors"
+                    >
+                      {allSelected ? 'Deselect All' : 'Select All'}
+                    </button>
+                  ) : null;
                 })()}
               </div>
               <div className="space-y-2">
                 {allCharacters
-                  .filter(c => c.userId === friend.uid)
+                  .filter(c => c.userId === currentUserUid)
                   .sort((a, b) => {
                     if (sortMethod === 'name') return a.name.localeCompare(b.name);
                     return (b.reputationValue ?? 0) - (a.reputationValue ?? 0);
@@ -291,14 +254,53 @@ export default function CharacterSummary({ characterIds, currentUserUid, onSelec
                     char={char} 
                     isSelected={characterIds.includes(char.id)} 
                     onToggle={() => toggleSelect(char.id)}
-                    isFriend
                   />
                 ))}
               </div>
             </div>
-          ))}
+
+            {/* Friends' Characters */}
+            {friends.map(friend => (
+              <div key={friend.uid} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[10px] text-purple-400 uppercase font-bold tracking-widest flex items-center gap-2">
+                    <Shield className="w-3 h-3" /> {friend.nickname || friend.email.split('@')[0]}'s Allied Heroes
+                  </h4>
+                  {(() => {
+                     const friendIds = allCharacters.filter(c => c.userId === friend.uid).map(c => c.id);
+                     const allSelected = friendIds.length > 0 && friendIds.every(id => characterIds.includes(id));
+                     return friendIds.length > 0 ? (
+                       <button 
+                         onClick={() => toggleBulkSelect(friendIds, !allSelected)}
+                         className="text-[9px] uppercase font-bold text-slate-500 hover:text-purple-400 transition-colors"
+                       >
+                         {allSelected ? 'Deselect All' : 'Select All'}
+                       </button>
+                     ) : null;
+                  })()}
+                </div>
+                <div className="space-y-2">
+                  {allCharacters
+                    .filter(c => c.userId === friend.uid)
+                    .sort((a, b) => {
+                      if (sortMethod === 'name') return a.name.localeCompare(b.name);
+                      return (b.reputationValue ?? 0) - (a.reputationValue ?? 0);
+                    })
+                    .map(char => (
+                    <CharacterMiniCard 
+                      key={char.id} 
+                      char={char} 
+                      isSelected={characterIds.includes(char.id)} 
+                      onToggle={() => toggleSelect(char.id)}
+                      isFriend
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Hub Body */}
       {viewMode === 'lookup' ? (
