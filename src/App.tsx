@@ -7,10 +7,11 @@ import CharacterList from './components/CharacterList';
 import CharacterCreate from './components/CharacterCreate';
 import CharacterDetails from './components/CharacterDetails';
 import CharacterSummary from './components/CharacterSummary';
-import { Swords, LogOut, Users, ShieldCheck, Menu, X as CloseIcon } from 'lucide-react';
+import { Swords, LogOut, Users, ShieldCheck, Menu, X as CloseIcon, Key } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import FriendsList from './components/FriendsList';
 import FriendCharacters from './components/FriendCharacters';
+import ChangePasswordModal from './components/ChangePasswordModal';
 
 export type View = 'list' | 'create' | 'details' | 'summary' | 'social';
 
@@ -24,6 +25,7 @@ export default function App() {
   const [backView, setBackView] = useState<'list' | 'social'>('list');
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   useEffect(() => {
     // Close sidebar on view change on mobile
@@ -181,6 +183,15 @@ export default function App() {
           </div>
 
           <button 
+            id="open_change_password_btn"
+            onClick={() => setIsChangePasswordOpen(true)}
+            className="w-full flex items-center justify-center gap-2 py-2 text-parchment/75 hover:text-white text-xs border border-slate-700/50 bg-slate-800/20 hover:bg-slate-800/50 rounded-lg transition-all font-sans"
+          >
+            <Key className="w-3.5 h-3.5 text-gold/80" /> Change Password
+          </button>
+
+          <button 
+            id="sign_out_btn"
             onClick={handleLogout}
             className="w-full flex items-center justify-center gap-2 py-2 text-gold hover:text-white text-sm opacity-60 hover:opacity-100 transition-all font-sans"
           >
@@ -283,6 +294,11 @@ export default function App() {
           </AnimatePresence>
         </div>
       </main>
+
+      <ChangePasswordModal 
+        isOpen={isChangePasswordOpen} 
+        onClose={() => setIsChangePasswordOpen(false)} 
+      />
     </div>
   );
 }
